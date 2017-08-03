@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.16.2">
+    <title>TEST – ExRabbitMQ v1.0.0</title>
+    <link rel="stylesheet" href="dist/app-268c9dc719.css" />
+    
+    <script src="dist/sidebar_items-4eb5584b4c.js"></script>
+  </head>
+  <body data-type="extras">
+    <script>try { if(localStorage.getItem('night-mode')) document.body.className += ' night-mode'; } catch (e) { }</script>
+
+<div class="main">
+<button class="sidebar-toggle">
+  <span class="icon-menu" aria-hidden="true"></span>
+  <span class="sr-only">Toggle Sidebar</span>
+</button>
+<section class="sidebar">
+
+  
+  <a href="http://exrabbitmq" class="sidebar-projectLink">
+    <div class="sidebar-projectDetails">
+      <h1 class="sidebar-projectName">
+        ExRabbitMQ
+      </h1>
+      <h2 class="sidebar-projectVersion">
+        v1.0.0
+      </h2>
+    </div>
+    
+      <img src="assets/logo.png" alt="ExRabbitMQ" class="sidebar-projectImage">
+    
+  </a>
+
+  <div class="sidebar-search">
+    <span class="icon-search" aria-hidden="true"></span>
+    <input type="text" class="sidebar-searchInput" placeholder="search" aria-label="Search" autocomplete="off" />
+  </div>
+
+  <ul class="sidebar-listNav">
+    <li><a id="extras-list" href="#full-list">Pages</a></li>
+
+    
+      <li><a id="modules-list" href="#full-list">Modules</a></li>
+    
+
+    
+
+    
+
+    
+  </ul>
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+
+<pre><code class="elixir">defmodule ExRabbitMQTest do
+  use ExUnit.Case
+
+  alias ExRabbitMQ.Connection
+  alias ExRabbitMQ.ConnectionConfig
+  alias ExRabbitMQ.Consumer.QueueConfig
+
+  test &quot;publishing a message and then consuming it&quot; do
+    # first we start the connection supervisor
+    # it holds the template for the GenServer wrapping connections to RabbitMQ
+    ExRabbitMQ.ConnectionSupervisor.start_link()
+
+    # configuration for a default local RabbitMQ installation
+    connection_config = %ConnectionConfig{username: &quot;guest&quot;, password: &quot;guest&quot;, host: &quot;127.0.0.1&quot;, reconnect_after: 500}
+    test_queue = &quot;xrmq_test&quot;
+
+    # configuration for a test queue where we will publish to/consumer from
+    queue_config = %QueueConfig{queue: test_queue, queue_opts: [durable: false, auto_delete: true], consume_opts: [no_ack: true]}
+
+    # the test message to be published and then consumed
+    test_message = &quot;ExRabbitMQ test&quot;
+
+    # we start the consumer so that the queue will be declared
+    {:ok, consumer} = ExRabbitMQConsumerTest.start_link(self(), connection_config, queue_config)
+
+    # we monitor the consumer so that we can wait for it to exit
+    consumer_monitor = Process.monitor(consumer)
+
+    # the consumer tells us that the connection has been opened
+    assert_receive({:consumer_connection_open, consumer_connection_pid},
+      500, &quot;failed to open a connection for the consumer&quot;)
+
+    # we monitor the consumer&#39;s connection GenServer wrapper so that we can wait for it to exit
+    consumer_connection_monitor = Process.monitor(consumer_connection_pid)
+
+    # is the consumer&#39;s connection truly ready?
+    assert({:ok, _consumer_connection} = Connection.get(consumer_connection_pid))
+
+    # are the consumer&#39;s channel and queue properly set up?
+    assert_receive({:consumer_state, %{consumer_channel_setup_ok: true, consumer_queue_setup_ok: {:ok, ^test_queue}}},
+      500, &quot;failed to properly setup the consumer&#39;s channel and/or queue&quot;)
+
+    # we start the producer to publish our test message
+    {:ok, producer} = ExRabbitMQProducerTest.start_link(self(), connection_config, test_queue, test_message)
+
+    # we monitor the producer so that we can wait for it to exit
+    producer_monitor = Process.monitor(producer)
+
+    # the producer tells us that the connection has been opened
+    assert_receive({:producer_connection_open, producer_connection_pid},
+      500, &quot;failed to open a connection for the producer&quot;)
+
+    # we monitor the producer&#39;s connection GenServer wrapper so that we can wait for it to exit
+    producer_connection_monitor = Process.monitor(producer_connection_pid)
+
+    # is the producer&#39;s connection truly ready?
+    assert({:ok, _producer_connection} = Connection.get(consumer_connection_pid))
+
+    # is the producers&#39;s channel properly set up?
+    assert_receive({:producer_state, %{producer_channel_setup_ok: true}},
+      500, &quot;failed to properly setup the producer&#39;s channel&quot;)
+
+    # the producer must have reused the same connection as the consumer
+    # when this connection is used for the maximum of 65535 channels,
+    # a new connection will be used for the next consumer/producer that needs one
+    assert consumer_connection_pid === producer_connection_pid
+
+    # the producer tells us that the message has been published
+    assert_receive({:publish, :ok}, 500, &quot;failed to publish test message #{test_message}&quot;)
+
+
+
+    # the consumer tells us that the message that we published is the same we have consumed
+    assert_receive({:consume, ^test_message}, 500, &quot;failed to receive test message #{test_message}&quot;)
+
+    # we stop everything
+    ExRabbitMQConsumerTest.stop(consumer)
+    ExRabbitMQProducerTest.stop(producer)
+    Connection.close(consumer_connection_pid)
+    Connection.close(producer_connection_pid)
+
+    # we make sure that everything has stopped as required before we exit
+    assert_receive({:DOWN, ^consumer_monitor, :process, _pid, _reason}, 500)
+    assert_receive({:DOWN, ^producer_monitor, :process, _pid, _reason}, 500)
+    assert_receive({:DOWN, ^consumer_connection_monitor, :process, _pid, _reason}, 500)
+    assert_receive({:DOWN, ^producer_connection_monitor, :process, _pid, _reason}, 500)
+  end
+end
+
+defmodule ExRabbitMQProducerTest do
+  @moduledoc false
+
+  use GenServer
+  use ExRabbitMQ.Producer
+
+  def start_link(tester_pid, connection_config, test_queue, test_message) do
+    GenServer.start_link(__MODULE__, %{
+      tester_pid: tester_pid,
+      connection_config: connection_config,
+      test_queue: test_queue,
+      test_message: test_message})
+  end
+
+  def init(state) do
+    GenServer.cast(self(), :init)
+
+    {:ok, state}
+  end
+
+  def stop(producer_pid) do
+    GenServer.cast(producer_pid, :stop)
+  end
+
+  def handle_cast(:init, %{
+    tester_pid: tester_pid,
+    connection_config: connection_config,
+    test_queue: test_queue,
+    test_message: test_message} = state) do
+    new_state =
+      xrmq_init(connection_config, state)
+      |&gt; xrmq_extract_new_state()
+
+    send(tester_pid, {:producer_connection_open, xrmq_get_connection_pid()})
+
+    send(tester_pid, {:producer_state, new_state})
+
+    publish_result = xrmq_basic_publish(test_message, &quot;&quot;, test_queue)
+
+    send(tester_pid, {:publish, publish_result})
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(:stop, state) do
+    {:stop, :normal, state}
+  end
+
+  def handle_info(_, state) do
+    {:noreply, state}
+  end
+
+  def xrmq_channel_setup(state) do
+    {:ok, Map.put(state, :producer_channel_setup_ok, true)}
+  end
+end
+
+defmodule ExRabbitMQConsumerTest do
+  @moduledoc false
+
+  use GenServer
+  use ExRabbitMQ.Consumer, GenServer
+
+  def start_link(tester_pid, connection_config, queue_config) do
+    GenServer.start_link(__MODULE__, %{tester_pid: tester_pid, connection_config: connection_config, queue_config: queue_config})
+  end
+
+  def init(state) do
+    GenServer.cast(self(), :init)
+
+    {:ok, state}
+  end
+
+  def stop(consumer_pid) do
+    GenServer.cast(consumer_pid, :stop)
+  end
+
+  def handle_cast(:init, %{tester_pid: tester_pid, connection_config: connection_config, queue_config: queue_config} = state) do
+    new_state =
+      xrmq_init(connection_config, queue_config, state)
+      |&gt; xrmq_extract_new_state()
+
+    send(tester_pid, {:consumer_connection_open, xrmq_get_connection_pid()})
+
+    send(tester_pid, {:consumer_state, new_state})
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(:stop, state) do
+    {:stop, :normal, state}
+  end
+
+  def handle_info(_, state) do
+    {:noreply, state}
+  end
+
+  def xrmq_basic_deliver(payload, _meta, %{tester_pid: tester_pid} = state) do
+    send(tester_pid, {:consume, payload})
+
+    {:noreply, state}
+  end
+
+  def xrmq_channel_setup(state) do
+    {:ok, Map.put(state, :consumer_channel_setup_ok, true)}
+  end
+
+  def xrmq_queue_setup(queue, state) do
+    {:ok, Map.put(state, :consumer_queue_setup_ok, {:ok, queue})}
+  end
+end
+</code></pre>
+
+      <footer class="footer">
+        <p>
+          <span class="line">
+            Built using
+            <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" rel="help" target="_blank">ExDoc</a> (v0.16.2),
+          </span>
+          <span class="line">
+            designed by
+            <a href="https://twitter.com/dignifiedquire" target="_blank" title="@dignifiedquire">Friedel Ziegelmayer</a>.
+            </span>
+        </p>
+        <button class="night-mode-toggle"><span class="sr-only">Switch theme</span></button>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+  <script src="dist/app-4988ddd06b.js"></script>
+  </body>
+</html>
+
