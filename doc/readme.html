@@ -8,7 +8,7 @@
     <title>ExRabbitMQ – ExRabbitMQ v1.0.0</title>
     <link rel="stylesheet" href="dist/app-268c9dc719.css" />
     
-    <script src="dist/sidebar_items-4eb5584b4c.js"></script>
+    <script src="dist/sidebar_items-d154780e00.js"></script>
   </head>
   <body data-type="extras">
     <script>try { if(localStorage.getItem('night-mode')) document.body.className += ' night-mode'; } catch (e) { }</script>
@@ -83,13 +83,13 @@ minimizing the need to directly interact with the AMQP module.</p>
   Overridable <a href="ExRabbitMQ.Consumer.html"><code class="inline">ExRabbitMQ.Consumer</code></a> callbacks
 </h2>
 
-<p><a href="ExRabbitMQ.Consumer.html#c:xrmq_channel_setup/1"><code class="inline">ExRabbitMQ.Consumer.xrmq_channel_setup/1</code></a></p>
-<pre><code class="elixir">def xrmq_channel_setup(state :: term) ::
+<p><a href="ExRabbitMQ.Consumer.html#c:xrmq_channel_setup/2"><code class="inline">ExRabbitMQ.Consumer.xrmq_channel_setup/2</code></a></p>
+<pre><code class="elixir">def xrmq_channel_setup(channel :: term, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</code></pre>
 <hr class="thin"/>
-<p><a href="ExRabbitMQ.Consumer.html#c:xrmq_queue_setup/2"><code class="inline">ExRabbitMQ.Consumer.xrmq_queue_setup/2</code></a></p>
-<pre><code class="elixir">def xrmq_queue_setup(queue :: String.t, state :: term) ::
+<p><a href="ExRabbitMQ.Consumer.html#c:xrmq_queue_setup/3"><code class="inline">ExRabbitMQ.Consumer.xrmq_queue_setup/3</code></a></p>
+<pre><code class="elixir">def xrmq_queue_setup(channel :: term, queue :: String.t, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</code></pre>
 <hr class="thin"/>
@@ -142,8 +142,8 @@ def xrmq_init(connection_config :: struct, queue_config :: struct, state :: term
   Overridable <a href="ExRabbitMQ.Producer.html"><code class="inline">ExRabbitMQ.Producer</code></a> callbacks
 </h2>
 
-<p><a href="ExRabbitMQ.Producer.html#c:xrmq_channel_setup/1"><code class="inline">ExRabbitMQ.Producer.xrmq_channel_setup/1</code></a></p>
-<pre><code class="elixir">def xrmq_channel_setup(state :: term) ::
+<p><a href="ExRabbitMQ.Producer.html#c:xrmq_channel_setup/2"><code class="inline">ExRabbitMQ.Producer.xrmq_channel_setup/2</code></a></p>
+<pre><code class="elixir">def xrmq_channel_setup(channel :: term, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</code></pre>
 <h2 id="provided-exrabbitmq-producer-functions" class="section-heading">

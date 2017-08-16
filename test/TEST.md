@@ -140,7 +140,7 @@ defmodule ExRabbitMQProducerTest do
     {:noreply, state}
   end
 
-  def xrmq_channel_setup(state) do
+  def xrmq_channel_setup(_channel, state) do
     {:ok, Map.put(state, :producer_channel_setup_ok, true)}
   end
 end
@@ -191,11 +191,11 @@ defmodule ExRabbitMQConsumerTest do
     {:noreply, state}
   end
 
-  def xrmq_channel_setup(state) do
+  def xrmq_channel_setup(_channel, state) do
     {:ok, Map.put(state, :consumer_channel_setup_ok, true)}
   end
 
-  def xrmq_queue_setup(queue, state) do
+  def xrmq_queue_setup(_channel, queue, state) do
     {:ok, Map.put(state, :consumer_queue_setup_ok, {:ok, queue})}
   end
 end

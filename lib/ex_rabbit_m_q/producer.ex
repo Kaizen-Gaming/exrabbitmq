@@ -13,7 +13,7 @@ defmodule ExRabbitMQ.Producer do
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
   @callback xrmq_get_connection_config() :: term
-  @callback xrmq_channel_setup(state :: term) ::
+  @callback xrmq_channel_setup(channel :: term, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
   @callback xrmq_basic_publish(payload :: term, exchange :: String.t, routing_key :: String.t, opts :: [term]) ::

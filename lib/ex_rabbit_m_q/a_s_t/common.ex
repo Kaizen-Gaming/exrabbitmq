@@ -13,7 +13,7 @@ defmodule ExRabbitMQ.AST.Common do
   """
   def ast() do
     quote location: :keep do
-      def xrmq_channel_setup(state) do
+      def xrmq_channel_setup(_channel, state) do
         {:ok, state}
       end
 
@@ -98,7 +98,7 @@ defmodule ExRabbitMQ.AST.Common do
 
                 Logger.debug("opened a new channel")
 
-                xrmq_channel_setup(state)
+                xrmq_channel_setup(channel, state)
               :closing ->
                 xrmq_set_channel_info(nil, nil)
 
@@ -125,7 +125,7 @@ defmodule ExRabbitMQ.AST.Common do
         new_state
       end
 
-      defoverridable xrmq_channel_setup: 1
+      defoverridable xrmq_channel_setup: 2
     end
   end
 end

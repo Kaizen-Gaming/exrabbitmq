@@ -8,7 +8,7 @@
     <title>ExRabbitMQ.Producer – ExRabbitMQ v1.0.0</title>
     <link rel="stylesheet" href="dist/app-268c9dc719.css" />
     
-    <script src="dist/sidebar_items-4eb5584b4c.js"></script>
+    <script src="dist/sidebar_items-d154780e00.js"></script>
   </head>
   <body data-type="modules">
     <script>try { if(localStorage.getItem('night-mode')) document.body.className += ' night-mode'; } catch (e) { }</script>
@@ -108,7 +108,7 @@ access the AMPQ interfaces.</p>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="#c:xrmq_channel_setup/1">xrmq_channel_setup(state)</a>
+    <a href="#c:xrmq_channel_setup/2">xrmq_channel_setup(channel, state)</a>
   </div>
   
 </div>
@@ -173,14 +173,14 @@ access the AMPQ interfaces.</p>
     
   </section>
 </div>
-<div class="detail" id="c:xrmq_channel_setup/1">
+<div class="detail" id="c:xrmq_channel_setup/2">
   
   <div class="detail-header">
-    <a href="#c:xrmq_channel_setup/1" class="detail-link" title="Link to this callback">
+    <a href="#c:xrmq_channel_setup/2" class="detail-link" title="Link to this callback">
       <span class="icon-link" aria-hidden="true"></span>
       <span class="sr-only">Link to this callback</span>
     </a>
-    <span class="signature">xrmq_channel_setup(state)</span>
+    <span class="signature">xrmq_channel_setup(channel, state)</span>
     
       <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
@@ -191,7 +191,7 @@ access the AMPQ interfaces.</p>
     
       <div class="specs">
         
-          <pre>xrmq_channel_setup(state :: term) ::
+          <pre>xrmq_channel_setup(channel :: term, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</pre>
         

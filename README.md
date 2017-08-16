@@ -18,18 +18,18 @@ def xrmq_basic_deliver(payload :: term, meta :: term, state :: term) ::
 ```
 ## Overridable `ExRabbitMQ.Consumer` callbacks
 
-`c:ExRabbitMQ.Consumer.xrmq_channel_setup/1`
+`c:ExRabbitMQ.Consumer.xrmq_channel_setup/2`
 ```elixir
-def xrmq_channel_setup(state :: term) ::
+def xrmq_channel_setup(channel :: term, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
 ```
 
 ---
 
-`c:ExRabbitMQ.Consumer.xrmq_queue_setup/2`
+`c:ExRabbitMQ.Consumer.xrmq_queue_setup/3`
 ```elixir
-def xrmq_queue_setup(queue :: String.t, state :: term) ::
+def xrmq_queue_setup(channel :: term, queue :: String.t, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
 ```
@@ -101,9 +101,9 @@ def xrmq_get_queue_config() :: term
 
 ## Overridable `ExRabbitMQ.Producer` callbacks
 
-`c:ExRabbitMQ.Producer.xrmq_channel_setup/1`
+`c:ExRabbitMQ.Producer.xrmq_channel_setup/2`
 ```elixir
-def xrmq_channel_setup(state :: term) ::
+def xrmq_channel_setup(channel :: term, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
 ```

@@ -22,10 +22,10 @@ defmodule ExRabbitMQ.Consumer do
     {:error, reason :: term, new_state :: term}
   @callback xrmq_get_connection_config() :: term
   @callback xrmq_get_queue_config() :: term
-  @callback xrmq_channel_setup(state :: term) ::
+  @callback xrmq_channel_setup(channel :: term, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
-  @callback xrmq_queue_setup(queue :: String.t, state :: term) ::
+  @callback xrmq_queue_setup(channel :: term, queue :: String.t, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
   @callback xrmq_basic_deliver(payload :: term, meta :: term, state :: term) ::
@@ -141,7 +141,7 @@ defmodule ExRabbitMQ.Consumer do
         else
           {:ok, %{queue: queue}} = AMQP.Queue.declare(channel, config.queue, config.queue_opts)
 
-          case xrmq_queue_setup(queue, state) do
+          case xrmq_queue_setup(channel, queue, state) do
             {:ok, _new_state} = result_ok ->
               {:ok, _} = AMQP.Basic.consume(channel, queue, nil, config.consume_opts)
 
@@ -152,7 +152,7 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
-      def xrmq_queue_setup(_queue, state) do
+      def xrmq_queue_setup(_channel, _queue, state) do
         {:ok, state}
       end
 
@@ -228,7 +228,7 @@ defmodule ExRabbitMQ.Consumer do
 
       unquote(common_ast)
 
-      defoverridable xrmq_queue_setup: 2, xrmq_basic_cancel: 2, xrmq_basic_ack: 2, xrmq_basic_reject: 2, xrmq_basic_reject: 3
+      defoverridable xrmq_queue_setup: 3, xrmq_basic_cancel: 2, xrmq_basic_ack: 2, xrmq_basic_reject: 2, xrmq_basic_reject: 3
     end
   end
 end
