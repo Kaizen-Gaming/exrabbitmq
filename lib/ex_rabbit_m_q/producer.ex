@@ -12,6 +12,7 @@ defmodule ExRabbitMQ.Producer do
   @callback xrmq_init(connection_config :: struct, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
+  @callback xrmq_get_env_config(key :: atom) :: keyword
   @callback xrmq_get_connection_config() :: term
   @callback xrmq_channel_setup(channel :: term, state :: term) ::
     {:ok, new_state :: term} |

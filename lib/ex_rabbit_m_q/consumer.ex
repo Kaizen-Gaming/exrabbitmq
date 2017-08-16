@@ -20,6 +20,7 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_init(connection_config :: struct, queue_config :: struct, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
+  @callback xrmq_get_env_config(key :: atom) :: keyword
   @callback xrmq_get_connection_config() :: term
   @callback xrmq_get_queue_config() :: term
   @callback xrmq_channel_setup(channel :: term, state :: term) ::
@@ -199,7 +200,7 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       defp xrmq_get_queue_config(key) do
-        config = Application.get_env(:exrabbitmq, key)
+        config = xrmq_get_env_config(key)
 
         %QueueConfig{
           queue: config[:queue],

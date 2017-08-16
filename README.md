@@ -87,6 +87,13 @@ def xrmq_init(connection_config :: struct, queue_config :: struct, state :: term
 
 ---
 
+`c:ExRabbitMQ.Consumer.xrmq_get_env_config/1`
+```elixir
+def xrmq_get_env_config(key :: atom) :: keyword
+```
+
+---
+
 `c:ExRabbitMQ.Consumer.xrmq_get_connection_config/0`
 ```elixir
 def xrmq_get_connection_config() :: term
@@ -118,6 +125,13 @@ def xrmq_init(connection_key :: atom, state :: term) ::
 def xrmq_init(connection_config :: struct, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
+```
+
+---
+
+`c:ExRabbitMQ.Consumer.xrmq_get_env_config/1`
+```elixir
+def xrmq_get_env_config(key :: atom) :: keyword
 ```
 
 ---

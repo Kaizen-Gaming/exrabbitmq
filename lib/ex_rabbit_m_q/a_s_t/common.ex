@@ -23,12 +23,16 @@ defmodule ExRabbitMQ.AST.Common do
         {:stop, :basic_cancel, state}
       end
 
+      def xrmq_get_env_config(key) do
+        Application.get_env(:exrabbitmq, key)
+      end
+
       def xrmq_get_connection_config() do
         Process.get(Constants.connection_config_key())
       end
 
       defp xrmq_get_connection_config(key) do
-        config = Application.get_env(:exrabbitmq, key)
+        config = xrmq_get_env_config(key)
 
         %ConnectionConfig{
           username: config[:username],
