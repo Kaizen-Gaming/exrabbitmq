@@ -1,6 +1,5 @@
-dist/app-268c9dc719.css
-dist/app-4988ddd06b.js
-dist/app-4988ddd06b.js.map
+dist/app-5b9e160cec.css
+dist/app-da04b39d0c.js
 fonts/icomoon.eot
 fonts/icomoon.svg
 fonts/icomoon.ttf
@@ -10,6 +9,7 @@ api-reference.html
 readme.html
 test.html
 assets/logo.png
+search.html
 404.html
 ExRabbitMQ.html
 ExRabbitMQ.AST.Common.html

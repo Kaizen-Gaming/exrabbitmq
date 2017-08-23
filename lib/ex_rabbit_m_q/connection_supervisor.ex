@@ -12,11 +12,13 @@ defmodule ExRabbitMQ.ConnectionSupervisor do
 
   def init(:ok) do
     children = [
-      worker(ExRabbitMQ.Connection, [], restart: :transient)
+      Supervisor.child_spec(
+        ExRabbitMQ.Connection,
+        start: {ExRabbitMQ.Connection, :start_link, []},
+        restart: :transient)
     ]
-
     options = [strategy: :simple_one_for_one]
-    supervise(children, options)
+    Supervisor.init(children, options)
   end
 
   def start_child(connection_config \\ nil) do
