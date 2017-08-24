@@ -55,17 +55,16 @@ defmodule ExRabbitMQ.Producer do
           end
 
         connection_pid =
-          case Enum.find(connection_pids, fn c -> Connection.subscribe(c) end) do
+          case Enum.find(connection_pids, fn c -> Connection.subscribe(c, connection_config) end) do
             nil ->
               {:ok, pid} = ExRabbitMQ.ConnectionSupervisor.start_child(connection_config)
+              Connection.subscribe(pid, connection_config)
               pid
             pid ->
               pid
           end
 
         Process.link(connection_pid)
-
-        Connection.subscribe(connection_pid)
 
         xrmq_set_connection_pid(connection_pid)
         xrmq_set_connection_config(connection_config)

@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.16.3">
-    <title>ExRabbitMQ.Connection – ExRabbitMQ v1.1.0</title>
+    <title>ExRabbitMQ.Connection – ExRabbitMQ v2.2.0</title>
     <link rel="stylesheet" href="dist/app-5b9e160cec.css" />
     
-    <script src="dist/sidebar_items-b61e9e18cb.js"></script>
+    <script src="dist/sidebar_items-1c71c197e0.js"></script>
     
   </head>
   <body data-type="modules">
@@ -28,7 +28,7 @@
         ExRabbitMQ
       </h1>
       <h2 class="sidebar-projectVersion">
-        v1.1.0
+        v2.2.0
       </h2>
     </div>
     
@@ -66,7 +66,7 @@
 
 
       <h1>
-        <small class="visible-xs">ExRabbitMQ v1.1.0</small>
+        <small class="visible-xs">ExRabbitMQ v2.2.0</small>
         ExRabbitMQ.Connection
         
           <a href="https://exrabbitmq" title="View Source" class="view-source" rel="help">
@@ -119,7 +119,7 @@
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="#subscribe/1">subscribe(connection_pid)</a>
+    <a href="#subscribe/2">subscribe(connection_pid, connection_config)</a>
   </div>
   
     <div class="summary-synopsis"><p>Subscribes a consumer process, via <code class="inline">self()</code>, to the managed ETS table</p>
@@ -205,15 +205,15 @@
 
   </section>
 </div>
-<div class="detail" id="subscribe/1">
+<div class="detail" id="subscribe/2">
   
   
   <div class="detail-header">
-    <a href="#subscribe/1" class="detail-link" title="Link to this function">
+    <a href="#subscribe/2" class="detail-link" title="Link to this function">
       <span class="icon-link" aria-hidden="true"></span>
       <span class="sr-only">Link to this function</span>
     </a>
-    <span class="signature">subscribe(connection_pid)</span>
+    <span class="signature">subscribe(connection_pid, connection_config)</span>
     
       <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
@@ -224,16 +224,18 @@
     
       <div class="specs">
         
-          <pre>subscribe(pid) :: true | false</pre>
+          <pre>subscribe(pid, term) :: true | false</pre>
         
       </div>
     
   </div>
   <section class="docstring">
     <p>Subscribes a consumer process, via <code class="inline">self()</code>, to the managed ETS table.</p>
-<p>If the ETS table already contains 65535 consumers, and thus the maximum allowed 65535 channels, then the subscription
-is not allowed so that a new connection can be created.</p>
-<p><code class="inline">connection_pid</code> is the GenServer pid implementing the called <a href="ExRabbitMQ.Connection.html#content"><code class="inline">ExRabbitMQ.Connection</code></a>)</p>
+<p>If the ETS table already contains 65535 consumers, and thus the maximum allowed 65535 channels,
+then the subscription is not allowed so that a new connection can be created.</p>
+<p><code class="inline">connection_pid</code> is the GenServer pid implementing the called <a href="ExRabbitMQ.Connection.html#content"><code class="inline">ExRabbitMQ.Connection</code></a></p>
+<p><code class="inline">connection_config</code> is the connection config that the <a href="ExRabbitMQ.Connection.html#content"><code class="inline">ExRabbitMQ.Connection</code></a> has to be using
+in order to allow the subscription</p>
 
   </section>
 </div>

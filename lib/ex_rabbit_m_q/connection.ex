@@ -57,14 +57,17 @@ defmodule ExRabbitMQ.Connection do
   @doc """
   Subscribes a consumer process, via `self()`, to the managed ETS table.
 
-  If the ETS table already contains 65535 consumers, and thus the maximum allowed 65535 channels, then the subscription
-  is not allowed so that a new connection can be created.
+  If the ETS table already contains 65535 consumers, and thus the maximum allowed 65535 channels,
+  then the subscription is not allowed so that a new connection can be created.
 
-  `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`)
+  `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`
+
+  `connection_config` is the connection config that the `ExRabbitMQ.Connection` has to be using
+  in order to allow the subscription
   """
-  @spec subscribe(pid) :: true | false
-  def subscribe(connection_pid) do
-    GenServer.call(connection_pid, {:subscribe, self()})
+  @spec subscribe(pid, term) :: true | false
+  def subscribe(connection_pid, connection_config) do
+    GenServer.call(connection_pid, {:subscribe, self(), connection_config})
   end
 
   @doc """
@@ -82,15 +85,20 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc false
-  def handle_call({:subscribe, consumer_pid}, _from, %Connection{ets_consumers: ets_consumers} = state) do
+  def handle_call({:subscribe, consumer_pid, connection_config}, _from,
+    %Connection{config: config, ets_consumers: ets_consumers} = state) do
     result =
-      case :ets.info(ets_consumers)[:size] do
-        65_535 ->
-          false
-        _ ->
-          :ets.insert_new(ets_consumers, {consumer_pid})
-          Process.monitor(consumer_pid)
-          true
+      if config === connection_config do
+        case :ets.info(ets_consumers)[:size] do
+          65_535 ->
+            false
+          _ ->
+            :ets.insert_new(ets_consumers, {consumer_pid})
+            Process.monitor(consumer_pid)
+            true
+        end
+      else
+        false
       end
 
     new_state = %{state | stale?: false}
