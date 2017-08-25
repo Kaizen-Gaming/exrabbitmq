@@ -2,6 +2,7 @@ defmodule ExRabbitMQ.Connection do
   @moduledoc """
   A GenServer implementing a long running connection to a RabbitMQ server, with embedded PubSub using :pg2 and :ets.
   """
+  @module __MODULE__
 
   use GenServer
 
@@ -15,7 +16,7 @@ defmodule ExRabbitMQ.Connection do
 
   @doc false
   def start_link(%ConnectionConfig{} = config) do
-    GenServer.start_link(__MODULE__, config)
+    GenServer.start_link(@module, config)
   end
 
   @doc false
