@@ -71,16 +71,16 @@ def xrmq_basic_reject(delivery_tag :: String.t, opts :: term, state :: term) ::
 
 `c:ExRabbitMQ.Consumer.xrmq_init/3`
 ```elixir
-def xrmq_init(connection_key :: atom, queue_key :: atom, state :: term) ::
+def xrmq_init(connection_key :: atom, queue_key :: atom, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_key :: atom, queue_config :: struct, state :: term) ::
+def xrmq_init(connection_key :: atom, queue_config :: struct, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_config :: struct, queue_key :: atom, state :: term) ::
+def xrmq_init(connection_config :: struct, queue_key :: atom, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_config :: struct, queue_config :: struct, state :: term) ::
+def xrmq_init(connection_config :: struct, queue_config :: struct, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
 ```
@@ -104,6 +104,15 @@ def xrmq_get_connection_config() :: term
 `c:ExRabbitMQ.Consumer.xrmq_get_queue_config/0`
 ```elixir
 def xrmq_get_queue_config() :: term
+```
+
+---
+
+`c:ExRabbitMQ.Consumer.xrmq_consume/1`
+```elixir
+def xrmq_consume(state :: term) ::
+  {:ok, new_state :: term} |
+  {:error, reason :: term, new_state :: term}
 ```
 
 ## Overridable `ExRabbitMQ.Producer` callbacks

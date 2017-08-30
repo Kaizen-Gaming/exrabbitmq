@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.16.3">
-    <title>ExRabbitMQ.Consumer – ExRabbitMQ v2.2.1</title>
+    <title>ExRabbitMQ.Consumer – ExRabbitMQ v2.3.0</title>
     <link rel="stylesheet" href="dist/app-5b9e160cec.css" />
     
-    <script src="dist/sidebar_items-1c71c197e0.js"></script>
+    <script src="dist/sidebar_items-b125e3a016.js"></script>
     
   </head>
   <body data-type="modules">
@@ -28,7 +28,7 @@
         ExRabbitMQ
       </h1>
       <h2 class="sidebar-projectVersion">
-        v2.2.1
+        v2.3.0
       </h2>
     </div>
     
@@ -66,7 +66,7 @@
 
 
       <h1>
-        <small class="visible-xs">ExRabbitMQ v2.2.1</small>
+        <small class="visible-xs">ExRabbitMQ v2.3.0</small>
         ExRabbitMQ.Consumer <small>behaviour</small>
         
           <a href="https://exrabbitmq" title="View Source" class="view-source" rel="help">
@@ -142,6 +142,12 @@ access the AMPQ interfaces.</p>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
+    <a href="#c:xrmq_consume/1">xrmq_consume(state)</a>
+  </div>
+  
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
     <a href="#c:xrmq_get_connection_config/0">xrmq_get_connection_config()</a>
   </div>
   
@@ -160,7 +166,7 @@ access the AMPQ interfaces.</p>
 </div>
 <div class="summary-row">
   <div class="summary-signature">
-    <a href="#c:xrmq_init/3">xrmq_init(connection_config, queue_config, state)</a>
+    <a href="#c:xrmq_init/4">xrmq_init(connection_config, queue_config, start_consuming, state)</a>
   </div>
   
 </div>
@@ -376,6 +382,36 @@ access the AMPQ interfaces.</p>
     
   </section>
 </div>
+<div class="detail" id="c:xrmq_consume/1">
+  
+  
+  <div class="detail-header">
+    <a href="#c:xrmq_consume/1" class="detail-link" title="Link to this callback">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <span class="signature">xrmq_consume(state)</span>
+    
+      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+       <span class="icon-code" aria-hidden="true"></span>
+       <span class="sr-only">View Source</span>
+     </a>
+    
+    
+    
+      <div class="specs">
+        
+          <pre>xrmq_consume(state :: term) ::
+  {:ok, new_state :: term} |
+  {:error, reason :: term, new_state :: term}</pre>
+        
+      </div>
+    
+  </div>
+  <section class="docstring">
+    
+  </section>
+</div>
 <div class="detail" id="c:xrmq_get_connection_config/0">
   
   
@@ -460,15 +496,15 @@ access the AMPQ interfaces.</p>
     
   </section>
 </div>
-<div class="detail" id="c:xrmq_init/3">
+<div class="detail" id="c:xrmq_init/4">
   
   
   <div class="detail-header">
-    <a href="#c:xrmq_init/3" class="detail-link" title="Link to this callback">
+    <a href="#c:xrmq_init/4" class="detail-link" title="Link to this callback">
       <span class="icon-link" aria-hidden="true"></span>
       <span class="sr-only">Link to this callback</span>
     </a>
-    <span class="signature">xrmq_init(connection_config, queue_config, state)</span>
+    <span class="signature">xrmq_init(connection_config, queue_config, start_consuming, state)</span>
     
       <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
@@ -479,19 +515,19 @@ access the AMPQ interfaces.</p>
     
       <div class="specs">
         
-          <pre>xrmq_init(connection_config :: struct, queue_config :: struct, state :: term) ::
+          <pre>xrmq_init(connection_config :: struct, queue_config :: struct, start_consuming :: true | false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</pre>
         
-          <pre>xrmq_init(connection_config :: struct, queue_key :: atom, state :: term) ::
+          <pre>xrmq_init(connection_config :: struct, queue_key :: atom, start_consuming :: true | false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</pre>
         
-          <pre>xrmq_init(connection_key :: atom, queue_config :: struct, state :: term) ::
+          <pre>xrmq_init(connection_key :: atom, queue_config :: struct, start_consuming :: true | false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</pre>
         
-          <pre>xrmq_init(connection_key :: atom, queue_key :: atom, state :: term) ::
+          <pre>xrmq_init(connection_key :: atom, queue_key :: atom, start_consuming :: true | false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</pre>
         

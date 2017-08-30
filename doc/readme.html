@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.16.3">
-    <title>ExRabbitMQ – ExRabbitMQ v2.2.1</title>
+    <title>ExRabbitMQ – ExRabbitMQ v2.3.0</title>
     <link rel="stylesheet" href="dist/app-5b9e160cec.css" />
     
-    <script src="dist/sidebar_items-1c71c197e0.js"></script>
+    <script src="dist/sidebar_items-b125e3a016.js"></script>
     
   </head>
   <body data-type="extras">
@@ -28,7 +28,7 @@
         ExRabbitMQ
       </h1>
       <h2 class="sidebar-projectVersion">
-        v2.2.1
+        v2.3.0
       </h2>
     </div>
     
@@ -121,17 +121,17 @@ def xrmq_basic_reject(delivery_tag :: String.t, opts :: term, state :: term) ::
   Provided <a href="ExRabbitMQ.Consumer.html"><code class="inline">ExRabbitMQ.Consumer</code></a> functions
 </h2>
 
-<p><a href="ExRabbitMQ.Consumer.html#c:xrmq_init/3"><code class="inline">ExRabbitMQ.Consumer.xrmq_init/3</code></a></p>
-<pre><code class="elixir">def xrmq_init(connection_key :: atom, queue_key :: atom, state :: term) ::
+<p><code class="inline">c:ExRabbitMQ.Consumer.xrmq_init/3</code></p>
+<pre><code class="elixir">def xrmq_init(connection_key :: atom, queue_key :: atom, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_key :: atom, queue_config :: struct, state :: term) ::
+def xrmq_init(connection_key :: atom, queue_config :: struct, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_config :: struct, queue_key :: atom, state :: term) ::
+def xrmq_init(connection_config :: struct, queue_key :: atom, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_config :: struct, queue_config :: struct, state :: term) ::
+def xrmq_init(connection_config :: struct, queue_config :: struct, start_consuming :: true|false, state :: term) ::
   {:ok, new_state :: term} |
   {:error, reason :: term, new_state :: term}</code></pre>
 <hr class="thin"/>
@@ -143,6 +143,11 @@ def xrmq_init(connection_config :: struct, queue_config :: struct, state :: term
 <hr class="thin"/>
 <p><a href="ExRabbitMQ.Consumer.html#c:xrmq_get_queue_config/0"><code class="inline">ExRabbitMQ.Consumer.xrmq_get_queue_config/0</code></a></p>
 <pre><code class="elixir">def xrmq_get_queue_config() :: term</code></pre>
+<hr class="thin"/>
+<p><a href="ExRabbitMQ.Consumer.html#c:xrmq_consume/1"><code class="inline">ExRabbitMQ.Consumer.xrmq_consume/1</code></a></p>
+<pre><code class="elixir">def xrmq_consume(state :: term) ::
+  {:ok, new_state :: term} |
+  {:error, reason :: term, new_state :: term}</code></pre>
 <h2 id="overridable-exrabbitmq-producer-callbacks" class="section-heading">
   <a href="#overridable-exrabbitmq-producer-callbacks" class="hover-link"><span class="icon-link" aria-hidden="true"></span></a>
   Overridable <a href="ExRabbitMQ.Producer.html"><code class="inline">ExRabbitMQ.Producer</code></a> callbacks
