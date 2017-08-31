@@ -3,7 +3,7 @@ defmodule ExRabbitMQ.Mixfile do
 
   def project do
     [app: :exrabbitmq,
-     version: "2.3.0",
+     version: "2.4.0",
      elixir: "~> 1.5",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
