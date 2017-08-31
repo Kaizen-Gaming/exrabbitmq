@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.16.3">
-    <title>ExRabbitMQ – ExRabbitMQ v2.3.0</title>
+    <title>ExRabbitMQ – ExRabbitMQ v2.4.0</title>
     <link rel="stylesheet" href="dist/app-5b9e160cec.css" />
     
-    <script src="dist/sidebar_items-b125e3a016.js"></script>
+    <script src="dist/sidebar_items-ba5070ade7.js"></script>
     
   </head>
   <body data-type="modules">
@@ -22,13 +22,13 @@
 <section class="sidebar">
 
   
-  <a href="http://exrabbitmq" class="sidebar-projectLink">
+  <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md" class="sidebar-projectLink">
     <div class="sidebar-projectDetails">
       <h1 class="sidebar-projectName">
         ExRabbitMQ
       </h1>
       <h2 class="sidebar-projectVersion">
-        v2.3.0
+        v2.4.0
       </h2>
     </div>
     
@@ -66,10 +66,10 @@
 
 
       <h1>
-        <small class="visible-xs">ExRabbitMQ v2.3.0</small>
+        <small class="visible-xs">ExRabbitMQ v2.4.0</small>
         ExRabbitMQ
         
-          <a href="https://exrabbitmq" title="View Source" class="view-source" rel="help">
+          <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/ex_rabbit_m_q.ex#L1" title="View Source" class="view-source" rel="help">
             <span class="icon-code" aria-hidden="true"></span>
             <span class="sr-only">View Source</span>
           </a>
@@ -89,9 +89,39 @@
 <li>A producer behaviour for publishing messages to a RabbitMQ queue
 </li>
 </ol>
-<p>The goal of the project is make it unnecessary for the programmer to directly handle connections and channels.</p>
+<p>The goal of the project are:</p>
+<ol>
+<li>Make it unnecessary for the programmer to directly handle connections and channels
+</li>
+<li>Reduce the boilerplate when creating new projects that interact with RabbitMQ
+</li>
+</ol>
 <p>As such, hooks are provided to enable the programmer to handle message delivery, cancellation, acknowlegement, rejection
 as well as publishing.</p>
+<p>For more information on implementing a consumer, see the documentation of the <a href="ExRabbitMQ.Consumer.html"><code class="inline">ExRabbitMQ.Consumer</code></a> behaviour.</p>
+<p>For more information on implementing a producer, see the documentation of the <a href="ExRabbitMQ.Producer.html"><code class="inline">ExRabbitMQ.Producer</code></a> behaviour.</p>
+<h2 id="module-installation" class="section-heading">
+  <a href="#module-installation" class="hover-link"><span class="icon-link" aria-hidden="true"></span></a>
+  Installation
+</h2>
+
+<ol>
+<li>Add <code class="inline">{:exrabbitmq, &quot;~&gt; 2.4.0&quot;}</code> (<a href="https://hex.pm/packages/exrabbitmq">https://hex.pm/packages/exrabbitmq</a>) in your project’s <code class="inline">deps</code> function in <code class="inline">mix.exs</code>
+</li>
+<li>Run <code class="inline">mix deps.get</code> and <code class="inline">mix compile</code> in your project’s root directory to download and compile the package
+</li>
+</ol>
+<h2 id="module-documentation" class="section-heading">
+  <a href="#module-documentation" class="hover-link"><span class="icon-link" aria-hidden="true"></span></a>
+  Documentation
+</h2>
+
+<ol>
+<li>Run <code class="inline">mix deps.get</code>, <code class="inline">mix compile</code> and <code class="inline">mix docs</code> in <code class="inline">:exrabbitmq</code>’s root directory
+</li>
+<li>Serve the <code class="inline">doc</code> folder in <code class="inline">:exrabbitmq</code>’s root directory with a web server
+</li>
+</ol>
 
         </section>
       

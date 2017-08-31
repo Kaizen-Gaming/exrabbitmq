@@ -1,7 +1,8 @@
 defmodule ExRabbitMQ.AST.Consumer.GenServer do
-  @moduledoc """
-  AST holding module for the consumer behaviour when the surrounding consumer is a GenServer.
-  """
+  @moduledoc false
+  # @moduledoc """
+  # AST holding module for the consumer behaviour when the surrounding consumer is a GenServer.
+  # """
 
   @doc """
   Produces part of the AST for the consumer behaviour when the consumer is a GenServer.
@@ -26,7 +27,7 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
         new_state =
           state
           |> xrmq_open_channel_consume()
-          |> xrmq_extract_new_state()
+          |> xrmq_extract_state()
 
         {:noreply, new_state}
       end
@@ -45,7 +46,7 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
             new_state =
               state
               |> xrmq_open_channel_consume()
-              |> xrmq_extract_new_state()
+              |> xrmq_extract_state()
 
             {:noreply, new_state}
           _ ->

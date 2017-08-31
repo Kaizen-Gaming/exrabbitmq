@@ -1,7 +1,8 @@
 defmodule ExRabbitMQ.AST.Common do
-  @moduledoc """
-  AST holding module for the consumer and producer behaviours.
-  """
+  @moduledoc false
+  # @moduledoc """
+  # AST holding module for the consumer and producer behaviours.
+  # """
 
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.
@@ -37,6 +38,14 @@ defmodule ExRabbitMQ.AST.Common do
 
       def xrmq_get_connection_config() do
         Process.get(Constants.connection_config_key())
+      end
+
+      def xrmq_extract_state({:ok, new_state}) do
+        new_state
+      end
+
+      def xrmq_extract_state({:error, _, new_state}) do
+        new_state
       end
 
       defp xrmq_get_connection_config(key) do
@@ -129,14 +138,6 @@ defmodule ExRabbitMQ.AST.Common do
           {:error, reason} ->
             {:error, reason, state}
         end
-      end
-
-      defp xrmq_extract_new_state({:ok, new_state}) do
-        new_state
-      end
-
-      defp xrmq_extract_new_state({:error, _, new_state}) do
-        new_state
       end
 
       defoverridable xrmq_channel_setup: 2

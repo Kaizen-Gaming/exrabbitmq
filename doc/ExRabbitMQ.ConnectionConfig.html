@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.16.3">
-    <title>ExRabbitMQ.ConnectionConfig – ExRabbitMQ v2.3.0</title>
+    <title>ExRabbitMQ.ConnectionConfig – ExRabbitMQ v2.4.0</title>
     <link rel="stylesheet" href="dist/app-5b9e160cec.css" />
     
-    <script src="dist/sidebar_items-b125e3a016.js"></script>
+    <script src="dist/sidebar_items-ba5070ade7.js"></script>
     
   </head>
   <body data-type="modules">
@@ -22,13 +22,13 @@
 <section class="sidebar">
 
   
-  <a href="http://exrabbitmq" class="sidebar-projectLink">
+  <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md" class="sidebar-projectLink">
     <div class="sidebar-projectDetails">
       <h1 class="sidebar-projectName">
         ExRabbitMQ
       </h1>
       <h2 class="sidebar-projectVersion">
-        v2.3.0
+        v2.4.0
       </h2>
     </div>
     
@@ -66,10 +66,10 @@
 
 
       <h1>
-        <small class="visible-xs">ExRabbitMQ v2.3.0</small>
+        <small class="visible-xs">ExRabbitMQ v2.4.0</small>
         ExRabbitMQ.ConnectionConfig
         
-          <a href="https://exrabbitmq" title="View Source" class="view-source" rel="help">
+          <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/connection_config.ex#L1" title="View Source" class="view-source" rel="help">
             <span class="icon-code" aria-hidden="true"></span>
             <span class="sr-only">View Source</span>
           </a>
@@ -79,7 +79,34 @@
       
         <section id="moduledoc">
           <p>A stucture holding the necessary information about a connection to a RabbitMQ node.</p>
-<pre><code class="elixir">defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]</code></pre>
+<pre><code class="elixir">defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after, :qos_opts]</code></pre>
+<h4>Connection configuration example:</h4>
+<pre><code class="elixir"># :connection is this connection&#39;s configuration name
+config :exrabbitmq, :connection,
+
+  # username for connecting to rabbitmq (distinct per connection configuration block)
+  username: &quot;username&quot;,
+
+  # password for connecting to rabbitmq(distinct per connection configuration block)
+  password: &quot;password&quot;,
+
+  # host where RabbitMQ is running
+  host: &quot;rabbitmq.host.my&quot;,
+
+  # port where RabbitMQ is listening (optional, default: 5672)
+  port: 5672,
+
+  # the virtual host to connect to (optional, default: /)
+  vhost: &quot;/&quot;,
+
+  # the connection&#39;s heartbeat RabbitMQ in milliseconds (optional, default: 1000)
+  heartbeat: 1000,
+
+  # the delay after which a connection wil be re-attempted after having been dropped (optional, default: 2000)
+  reconnect_after: 2000,
+
+  # the options to use for specifying QoS properties on a channel (optional, default: nil)
+  qos_opts: nil</code></pre>
 
         </section>
       

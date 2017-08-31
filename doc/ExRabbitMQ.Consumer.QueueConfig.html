@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.16.3">
-    <title>ExRabbitMQ.Consumer.QueueConfig – ExRabbitMQ v2.3.0</title>
+    <title>ExRabbitMQ.Consumer.QueueConfig – ExRabbitMQ v2.4.0</title>
     <link rel="stylesheet" href="dist/app-5b9e160cec.css" />
     
-    <script src="dist/sidebar_items-b125e3a016.js"></script>
+    <script src="dist/sidebar_items-ba5070ade7.js"></script>
     
   </head>
   <body data-type="modules">
@@ -22,13 +22,13 @@
 <section class="sidebar">
 
   
-  <a href="http://exrabbitmq" class="sidebar-projectLink">
+  <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md" class="sidebar-projectLink">
     <div class="sidebar-projectDetails">
       <h1 class="sidebar-projectName">
         ExRabbitMQ
       </h1>
       <h2 class="sidebar-projectVersion">
-        v2.3.0
+        v2.4.0
       </h2>
     </div>
     
@@ -66,10 +66,10 @@
 
 
       <h1>
-        <small class="visible-xs">ExRabbitMQ v2.3.0</small>
+        <small class="visible-xs">ExRabbitMQ v2.4.0</small>
         ExRabbitMQ.Consumer.QueueConfig
         
-          <a href="https://exrabbitmq" title="View Source" class="view-source" rel="help">
+          <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer/queue_config.ex#L1" title="View Source" class="view-source" rel="help">
             <span class="icon-code" aria-hidden="true"></span>
             <span class="sr-only">View Source</span>
           </a>
@@ -79,7 +79,31 @@
       
         <section id="moduledoc">
           <p>A stucture holding the necessary information about a queue that is to be consumed.</p>
-<pre><code class="elixir">defstruct [:queue, :queue_opts, :consume_opts]</code></pre>
+<pre><code class="elixir">defstruct [:queue, :queue_opts, :consume_opts, :bind_opts]</code></pre>
+<h4>Queue configuration example:</h4>
+<pre><code class="elixir"># :queue is this queue&#39;s configuration name
+config :exrabbitmq, :queue,
+
+  # name of the queue from which we wish to consume (optional, default: &quot;&quot;)
+  queue: &quot;my_queue&quot;,
+
+  # properties set on the queue when it is declared (optional, default: [])
+  queue_opts: [durable: true],
+
+  # properties set on the call to consume from the queue (optional, default: [])
+  consume_opts: [no_ack: false],
+
+  # the options to use when one wants to do a non default binding to an exchange (optional, default: nil)
+  bind_opts: [
+
+    # the exchange to bind to (required when bind_opts has been provided)
+    exchange: &quot;my_exchange&quot;,
+
+    # extra options to pass to the RabbitMQ call (optional, default: [])
+    extra_opts: [
+      &quot;routing_key&quot;: &quot;my_routing_key&quot;
+    ]
+  ]</code></pre>
 
         </section>
       

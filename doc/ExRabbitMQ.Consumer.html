@@ -5,10 +5,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.16.3">
-    <title>ExRabbitMQ.Consumer – ExRabbitMQ v2.3.0</title>
+    <title>ExRabbitMQ.Consumer – ExRabbitMQ v2.4.0</title>
     <link rel="stylesheet" href="dist/app-5b9e160cec.css" />
     
-    <script src="dist/sidebar_items-b125e3a016.js"></script>
+    <script src="dist/sidebar_items-ba5070ade7.js"></script>
     
   </head>
   <body data-type="modules">
@@ -22,13 +22,13 @@
 <section class="sidebar">
 
   
-  <a href="http://exrabbitmq" class="sidebar-projectLink">
+  <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md" class="sidebar-projectLink">
     <div class="sidebar-projectDetails">
       <h1 class="sidebar-projectName">
         ExRabbitMQ
       </h1>
       <h2 class="sidebar-projectVersion">
-        v2.3.0
+        v2.4.0
       </h2>
     </div>
     
@@ -66,10 +66,10 @@
 
 
       <h1>
-        <small class="visible-xs">ExRabbitMQ v2.3.0</small>
+        <small class="visible-xs">ExRabbitMQ v2.4.0</small>
         ExRabbitMQ.Consumer <small>behaviour</small>
         
-          <a href="https://exrabbitmq" title="View Source" class="view-source" rel="help">
+          <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L1" title="View Source" class="view-source" rel="help">
             <span class="icon-code" aria-hidden="true"></span>
             <span class="sr-only">View Source</span>
           </a>
@@ -82,6 +82,56 @@
 <p>It abstracts the handling of message delivery and acknowlegement.</p>
 <p>It also provides hooks to allow the programmer to wrap the consumption of a message without having to directly
 access the AMPQ interfaces.</p>
+<p>For a connection configuration example see <a href="ExRabbitMQ.ConnectionConfig.html"><code class="inline">ExRabbitMQ.ConnectionConfig</code></a>.</p>
+<p>For a queue configuration example see <a href="ExRabbitMQ.Consumer.QueueConfig.html"><code class="inline">ExRabbitMQ.Consumer.QueueConfig</code></a>.</p>
+<h4>Example usage for a consumer implementing a <a href="https://hexdocs.pm/elixir/GenServer.html"><code class="inline">GenServer</code></a></h4>
+<pre><code class="elixir">defmodule MyExRabbitMQConsumer do
+  @module __MODULE__
+
+  use GenServer
+  use ExRabbitMQ.Consumer, GenServer
+
+  def start_link() do
+    GenServer.start_link(@module, :ok)
+  end
+
+  def init(:ok) do
+    new_state =
+      xrmq_init(:connection, :queue, state)
+      |&gt; xrmq_extract_state()
+
+    {:ok, new_state}
+  end
+
+  # required override
+  def xrmq_basic_deliver(payload, meta, state) do
+    # your message delivery logic goes here...
+
+    {:noreply, state}
+  end
+
+  # optional override
+  def xrmq_channel_setup(channel, state) do
+    # the default channel setup uses the optinal qos_opts from
+    # the connection&#39;s configuration so we can use it
+    # automatically by calling super,
+    # unless we want to override everything
+    {:ok, state} = super(channel, state)
+
+    # any other channel setup goes here...
+  end
+
+  # optional override
+  def xrmq_queue_setup(channel, queue, state) do
+    # the default queue setup uses the optional bind_opts from
+    # the queue&#39;s configuration so we can use it
+    # automatically by calling super,
+    # unless we want to override everything
+    {:ok, state} = super(channel, queue, state)
+
+    # any other queue setup goes here...
+  end
+end</code></pre>
 
         </section>
       
@@ -109,11 +159,18 @@ access the AMPQ interfaces.</p>
     <a href="#c:xrmq_basic_ack/2">xrmq_basic_ack(delivery_tag, state)</a>
   </div>
   
+    <div class="summary-synopsis"><p>This overridable function can be called whenever <code class="inline">no_ack</code> is set to <code class="inline">false</code> and the user
+wants to <em>ack</em> a message</p>
+</div>
+  
 </div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="#c:xrmq_basic_cancel/2">xrmq_basic_cancel(cancellation_info, state)</a>
   </div>
+  
+    <div class="summary-synopsis"><p>This overridable hook is  called as a response to a <code class="inline">:basic_cancel</code> message</p>
+</div>
   
 </div>
 <div class="summary-row">
@@ -121,11 +178,19 @@ access the AMPQ interfaces.</p>
     <a href="#c:xrmq_basic_deliver/3">xrmq_basic_deliver(payload, meta, state)</a>
   </div>
   
+    <div class="summary-synopsis"><p>This callback is the only required callback (i.e., without any default implementation) and
+is called as a response to a <code class="inline">:basic_consume</code> message</p>
+</div>
+  
 </div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="#c:xrmq_basic_reject/2">xrmq_basic_reject(delivery_tag, state)</a>
   </div>
+  
+    <div class="summary-synopsis"><p>This overridable function can be called whenever <code class="inline">no_ack</code> is set to <code class="inline">false</code> and the user wants
+to reject a message</p>
+</div>
   
 </div>
 <div class="summary-row">
@@ -133,11 +198,18 @@ access the AMPQ interfaces.</p>
     <a href="#c:xrmq_basic_reject/3">xrmq_basic_reject(delivery_tag, opts, state)</a>
   </div>
   
+    <div class="summary-synopsis"><p>This overridable function can be called whenever <code class="inline">no_ack</code> is set to <code class="inline">false</code> and the user wants
+to reject a message</p>
+</div>
+  
 </div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="#c:xrmq_channel_setup/2">xrmq_channel_setup(channel, state)</a>
   </div>
+  
+    <div class="summary-synopsis"><p>This hook is called when a connection has been established and a new channel has been opened</p>
+</div>
   
 </div>
 <div class="summary-row">
@@ -145,11 +217,26 @@ access the AMPQ interfaces.</p>
     <a href="#c:xrmq_consume/1">xrmq_consume(state)</a>
   </div>
   
+    <div class="summary-synopsis"><p>This hook is called automatically, if <code class="inline">start_consuming</code> was <code class="inline">true</code> when <a href="#c:xrmq_init/4"><code class="inline">xrmq_init/4</code></a></p>
+</div>
+  
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="#c:xrmq_extract_state/1">xrmq_extract_state(arg0)</a>
+  </div>
+  
+    <div class="summary-synopsis"><p>Helper function that extracts the <code class="inline">state</code> argument from the passed in tuple</p>
+</div>
+  
 </div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="#c:xrmq_get_connection_config/0">xrmq_get_connection_config()</a>
   </div>
+  
+    <div class="summary-synopsis"><p>Returns the connection configuration as it was passed to <a href="#c:xrmq_init/4"><code class="inline">xrmq_init/4</code></a></p>
+</div>
   
 </div>
 <div class="summary-row">
@@ -157,11 +244,18 @@ access the AMPQ interfaces.</p>
     <a href="#c:xrmq_get_env_config/1">xrmq_get_env_config(key)</a>
   </div>
   
+    <div class="summary-synopsis"><p>Returns a part of the <code class="inline">:exrabbitmq</code> configuration section, specified with the
+<code class="inline">key</code> argument</p>
+</div>
+  
 </div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="#c:xrmq_get_queue_config/0">xrmq_get_queue_config()</a>
   </div>
+  
+    <div class="summary-synopsis"><p>Returns the queue configuration as it was passed to <a href="#c:xrmq_init/4"><code class="inline">xrmq_init/4</code></a></p>
+</div>
   
 </div>
 <div class="summary-row">
@@ -169,11 +263,17 @@ access the AMPQ interfaces.</p>
     <a href="#c:xrmq_init/4">xrmq_init(connection_config, queue_config, start_consuming, state)</a>
   </div>
   
+    <div class="summary-synopsis"><p>Initiates a connection or reuses an existing one</p>
+</div>
+  
 </div>
 <div class="summary-row">
   <div class="summary-signature">
     <a href="#c:xrmq_queue_setup/3">xrmq_queue_setup(channel, queue, state)</a>
   </div>
+  
+    <div class="summary-synopsis"><p>This hook is called automatically as part of the flow in <a href="#c:xrmq_consume/1"><code class="inline">xrmq_consume/1</code></a></p>
+</div>
   
 </div>
 
@@ -206,7 +306,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_basic_ack(delivery_tag, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L254" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -223,7 +323,12 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>This overridable function can be called whenever <code class="inline">no_ack</code> is set to <code class="inline">false</code> and the user
+wants to <em>ack</em> a message.</p>
+<p>It is passed the <code class="inline">delivery_tag</code> of the request and by default it simply <em>acks</em> the message
+as per the RabbitMQ API.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_basic_cancel/2">
@@ -236,7 +341,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_basic_cancel(cancellation_info, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L238" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -256,7 +361,11 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>This overridable hook is  called as a response to a <code class="inline">:basic_cancel</code> message.</p>
+<p>It is passed the <code class="inline">cancellation_info</code> of the request and by default it logs an error and
+returns <code class="inline">{:stop, :basic_cancel, state}</code>.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_basic_deliver/3">
@@ -269,7 +378,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_basic_deliver(payload, meta, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L223" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -289,7 +398,11 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>This callback is the only required callback (i.e., without any default implementation) and
+is called as a response to a <code class="inline">:basic_consume</code> message.</p>
+<p>It is passed the <code class="inline">payload</code> of the request as well as the <code class="inline">meta</code> object or the message.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_basic_reject/2">
@@ -302,7 +415,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_basic_reject(delivery_tag, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L269" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -319,7 +432,13 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>This overridable function can be called whenever <code class="inline">no_ack</code> is set to <code class="inline">false</code> and the user wants
+to reject a message.</p>
+<p>It is passed the <code class="inline">delivery_tag</code> of the request and by default it simply rejects the message
+as per the RabbitMQ API.</p>
+<p>This function simply calls <a href="#c:xrmq_basic_reject/3"><code class="inline">xrmq_basic_reject/3</code></a> with <code class="inline">opts</code> set to <code class="inline">[]</code>.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_basic_reject/3">
@@ -332,7 +451,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_basic_reject(delivery_tag, opts, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L282" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -349,7 +468,12 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>This overridable function can be called whenever <code class="inline">no_ack</code> is set to <code class="inline">false</code> and the user wants
+to reject a message.</p>
+<p>It is passed the <code class="inline">delivery_tag</code> of the request and by default it simply rejects the message
+as per the RabbitMQ API.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_channel_setup/2">
@@ -362,7 +486,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_channel_setup(channel, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L182" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -379,7 +503,9 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>This hook is called when a connection has been established and a new channel has been opened.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_consume/1">
@@ -392,7 +518,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_consume(state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L200" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -409,7 +535,49 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
+    <p>This hook is called automatically, if <code class="inline">start_consuming</code> was <code class="inline">true</code> when <a href="#c:xrmq_init/4"><code class="inline">xrmq_init/4</code></a>.</p>
+<p>If not, then the user has to call it to start consuming.</p>
+<p>It is invoked when a connection has been established and a new channel has been opened.</p>
+<p>Its flow is to:</p>
+<ol>
+<li>Declare the queue
+</li>
+<li>Run <a href="#c:xrmq_queue_setup/3"><code class="inline">xrmq_queue_setup/3</code></a>
+</li>
+<li>Start consuming from the queue
+</li>
+</ol>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
+  </section>
+</div>
+<div class="detail" id="c:xrmq_extract_state/1">
+  
+  
+  <div class="detail-header">
+    <a href="#c:xrmq_extract_state/1" class="detail-link" title="Link to this callback">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this callback</span>
+    </a>
+    <span class="signature">xrmq_extract_state(arg0)</span>
     
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L289" class="view-source" rel="help" title="View Source">
+       <span class="icon-code" aria-hidden="true"></span>
+       <span class="sr-only">View Source</span>
+     </a>
+    
+    
+    
+      <div class="specs">
+        
+          <pre>xrmq_extract_state({:ok, state :: term} | {:error, reason :: term, state :: term}) :: state :: term</pre>
+        
+      </div>
+    
+  </div>
+  <section class="docstring">
+    <p>Helper function that extracts the <code class="inline">state</code> argument from the passed in tuple.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_get_connection_config/0">
@@ -422,7 +590,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_get_connection_config()</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L166" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -437,7 +605,10 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>Returns the connection configuration as it was passed to <a href="#c:xrmq_init/4"><code class="inline">xrmq_init/4</code></a>.</p>
+<p>This configuration is set in the wrapper process’s dictionary.</p>
+<p>For the configuration format see the top section of <a href="ExRabbitMQ.Consumer.html#content"><code class="inline">ExRabbitMQ.Consumer</code></a>.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_get_env_config/1">
@@ -450,7 +621,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_get_env_config(key)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L157" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -465,7 +636,10 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>Returns a part of the <code class="inline">:exrabbitmq</code> configuration section, specified with the
+<code class="inline">key</code> argument.</p>
+<p>For the configuration format see the top section of <a href="ExRabbitMQ.Consumer.html#content"><code class="inline">ExRabbitMQ.Consumer</code></a>.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_get_queue_config/0">
@@ -478,7 +652,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_get_queue_config()</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L175" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -493,7 +667,10 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>Returns the queue configuration as it was passed to <a href="#c:xrmq_init/4"><code class="inline">xrmq_init/4</code></a>.</p>
+<p>This configuration is set in the wrapper process’s dictionary.</p>
+<p>For the configuration format see the top section of <a href="ExRabbitMQ.Consumer.html#content"><code class="inline">ExRabbitMQ.Consumer</code></a>.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_init/4">
@@ -506,7 +683,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_init(connection_config, queue_config, start_consuming, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L83" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -535,7 +712,15 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>Initiates a connection or reuses an existing one.</p>
+<p>When a connection is established then a new channel is opened.</p>
+<p>Next, <a href="#c:xrmq_channel_setup/2"><code class="inline">xrmq_channel_setup/2</code></a> is called to do any extra work on the opened channel.</p>
+<p>If <code class="inline">start_consuming</code> is <code class="inline">true</code> then <a href="#c:xrmq_consume/1"><code class="inline">xrmq_consume/1</code></a> is called automatically.</p>
+<p>This variant accepts a <a href="ExRabbitMQ.Connection.html"><code class="inline">ExRabbitMQ.Connection</code></a> and a <a href="ExRabbitMQ.Consumer.QueueConfig.html"><code class="inline">ExRabbitMQ.Consumer.QueueConfig</code></a> structs
+as the arguments for the <code class="inline">connection_config</code> and <code class="inline">queue_config</code> parameters.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+<p>For the configuration format see the top section of <a href="ExRabbitMQ.Consumer.html#content"><code class="inline">ExRabbitMQ.Consumer</code></a>.</p>
+
   </section>
 </div>
 <div class="detail" id="c:xrmq_queue_setup/3">
@@ -548,7 +733,7 @@ access the AMPQ interfaces.</p>
     </a>
     <span class="signature">xrmq_queue_setup(channel, queue, state)</span>
     
-      <a href="https://exrabbitmq" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/StoiximanServices/exrabbitmq/blob/master/lib/ex_rabbit_m_q/consumer.ex#L211" class="view-source" rel="help" title="View Source">
        <span class="icon-code" aria-hidden="true"></span>
        <span class="sr-only">View Source</span>
      </a>
@@ -565,7 +750,10 @@ access the AMPQ interfaces.</p>
     
   </div>
   <section class="docstring">
-    
+    <p>This hook is called automatically as part of the flow in <a href="#c:xrmq_consume/1"><code class="inline">xrmq_consume/1</code></a>.</p>
+<p>It allows the user to run extra queue setup steps when the queue has been declared.</p>
+<p>The wrapper process’s state is passed in to allow the callback to mutate it if overriden.</p>
+
   </section>
 </div>
 

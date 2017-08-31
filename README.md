@@ -1,176 +1,30 @@
 # ExRabbitMQ
 
-RabbitMQ client library, written in Elixir, which abstracts away connection and channel lifecycle handling.
+A project providing the following abstractions:
 
-It provides hooks and default function implementations, to allow library users to consume and publish messages,
-minimizing the need to directly interact with the AMQP module.
+1. Connection lifecycle handling
+2. Channel lifecycle handling
+3. A consumer behaviour for consuming from a RabbitMQ queue
+4. A producer behaviour for publishing messages to a RabbitMQ queue
 
-## Required `ExRabbitMQ.Consumer` callbacks
+The goal of the project are:
 
-`c:ExRabbitMQ.Consumer.xrmq_basic_deliver/3`
-```elixir
-def xrmq_basic_deliver(payload :: term, meta :: term, state :: term) ::
-  {:noreply, new_state :: term} |
-  {:noreply, new_state :: term, timeout | :hibernate} |
-  {:noreply, [event :: term], new_state :: term} |
-  {:noreply, [event :: term], new_state :: term, :hibernate} |
-  {:stop, reason :: term, new_state :: term}
-```
-## Overridable `ExRabbitMQ.Consumer` callbacks
+1. Make it unnecessary for the programmer to directly handle connections and channels
+2. Reduce the boilerplate when creating new projects that interact with RabbitMQ
 
-`c:ExRabbitMQ.Consumer.xrmq_channel_setup/2`
-```elixir
-def xrmq_channel_setup(channel :: term, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
+As such, hooks are provided to enable the programmer to handle message delivery, cancellation, acknowlegement, rejection
+as well as publishing.
 
----
+For more information on implementing a consumer, see the documentation of the `ExRabbitMQ.Consumer` behaviour.
 
-`c:ExRabbitMQ.Consumer.xrmq_queue_setup/3`
-```elixir
-def xrmq_queue_setup(channel :: term, queue :: String.t, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
+For more information on implementing a producer, see the documentation of the `ExRabbitMQ.Producer` behaviour.
 
----
+## Installation
 
-`c:ExRabbitMQ.Consumer.xrmq_basic_cancel/2`
-```elixir
-def xrmq_basic_cancel(cancellation_info :: any, state :: any) ::
-  {:noreply, new_state :: term} |
-  {:noreply, new_state :: term, timeout | :hibernate} |
-  {:noreply, [event :: term], new_state :: term} |
-  {:noreply, [event :: term], new_state :: term, :hibernate} |
-  {:stop, reason :: term, new_state :: term}
-```
+1. Add `{:exrabbitmq, "~> X.Y.Z"}` ([https://hex.pm/packages/exrabbitmq](https://hex.pm/packages/exrabbitmq)) in your project's `deps` function in `mix.exs`
+2. Run `mix deps.get` and `mix compile` in your project's root directory to download and compile the package
 
----
+## Documentation
 
-`c:ExRabbitMQ.Consumer.xrmq_basic_ack/2`
-```elixir
-def xrmq_basic_ack(delivery_tag :: String.t, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
-
----
-
-`c:ExRabbitMQ.Consumer.xrmq_basic_reject/2`
-```elixir
-def xrmq_basic_reject(delivery_tag :: String.t, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-def xrmq_basic_reject(delivery_tag :: String.t, opts :: term, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
-
-## Provided `ExRabbitMQ.Consumer` functions
-
-`c:ExRabbitMQ.Consumer.xrmq_init/3`
-```elixir
-def xrmq_init(connection_key :: atom, queue_key :: atom, start_consuming :: true|false, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_key :: atom, queue_config :: struct, start_consuming :: true|false, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_config :: struct, queue_key :: atom, start_consuming :: true|false, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_config :: struct, queue_config :: struct, start_consuming :: true|false, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
-
----
-
-`c:ExRabbitMQ.Consumer.xrmq_get_env_config/1`
-```elixir
-def xrmq_get_env_config(key :: atom) :: keyword
-```
-
----
-
-`c:ExRabbitMQ.Consumer.xrmq_get_connection_config/0`
-```elixir
-def xrmq_get_connection_config() :: term
-```
-
----
-
-`c:ExRabbitMQ.Consumer.xrmq_get_queue_config/0`
-```elixir
-def xrmq_get_queue_config() :: term
-```
-
----
-
-`c:ExRabbitMQ.Consumer.xrmq_consume/1`
-```elixir
-def xrmq_consume(state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
-
-## Overridable `ExRabbitMQ.Producer` callbacks
-
-`c:ExRabbitMQ.Producer.xrmq_channel_setup/2`
-```elixir
-def xrmq_channel_setup(channel :: term, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
-
-## Provided `ExRabbitMQ.Producer` functions
-
-`c:ExRabbitMQ.Producer.xrmq_init/2`
-```elixir
-def xrmq_init(connection_key :: atom, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-def xrmq_init(connection_config :: struct, state :: term) ::
-  {:ok, new_state :: term} |
-  {:error, reason :: term, new_state :: term}
-```
-
----
-
-`c:ExRabbitMQ.Consumer.xrmq_get_env_config/1`
-```elixir
-def xrmq_get_env_config(key :: atom) :: keyword
-```
-
----
-
-`c:ExRabbitMQ.Producer.xrmq_get_connection_config/0`
-```elixir
-def xrmq_get_connection_config() :: term
-```
-
----
-
-`c:ExRabbitMQ.Producer.xrmq_basic_publish/4`
-```elixir
-def xrmq_basic_publish(payload :: term, exchange :: String.t, routing_key :: String.t, opts :: [term]) ::
-  :ok |
-  {:error, reason :: :blocked | :closing | :no_channel}
-```
-
-## Configuration
-
-You can provide configuration for connections and queues in two ways.
-
-1. Define configuration sections under application `:exrabbitmq` with appropriate atom keys and pass these keys to `c:ExRabbitMQ.Consumer.xrmq_init/2` and `c:ExRabbitMQ.Producer.xrmq_init/1`.
-2. Use the configuration structs `ExRabbitMQ.ConnectionConfig` and `ExRabbitMQ.Consumer.QueueConfig` and pass them directly to
-`c:ExRabbitMQ.Consumer.xrmq_init/2` and `c:ExRabbitMQ.Producer.xrmq_init/1`.
-
-## Example usage
-
-For an example usage please refer to **[test/ex_rabbit_m_q_test.exs](./test.html)**.
-
-There you will find a complete producer/consumer example, which you can run
-given a local RabbitMQ installation at `127.0.0.1:5672` with the default
-credentials `guest:guest`.
+1. Run `mix deps.get`, `mix compile` and `mix docs` in `:exrabbitmq`'s root directory
+2. Serve the `doc` folder in `:exrabbitmq`'s root directory with a web server
