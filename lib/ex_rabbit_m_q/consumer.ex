@@ -142,15 +142,16 @@ defmodule ExRabbitMQ.Consumer do
         if channel === nil or config === nil do
           nil
         else
-          {:ok, %{queue: queue}} = AMQP.Queue.declare(channel, config.queue, config.queue_opts)
-
-          case xrmq_queue_setup(channel, queue, state) do
-            {:ok, _new_state} = result_ok ->
-              {:ok, _} = AMQP.Basic.consume(channel, queue, nil, config.consume_opts)
-
-              result_ok
-            error ->
-              error
+          with \
+            {:ok, %{queue: queue}} <- AMQP.Queue.declare(channel, config.queue, config.queue_opts),
+            {:ok, new_state} <- xrmq_queue_setup(channel, queue, state),
+            {:ok, _} <- AMQP.Basic.consume(channel, queue, nil, config.consume_opts)
+          do
+            {:ok, new_state}
+          else
+            {:error, reason, state} = error -> error
+            {:error, reason} -> {:error, reason, state}
+            error -> {:error, error, state}
           end
         end
       end
@@ -160,11 +161,20 @@ defmodule ExRabbitMQ.Consumer do
           queue: config.queue || "",
           queue_opts: config.queue_opts || [],
           consume_opts: config.consume_opts || [],
+          bind_opts: config.bind_opts || nil,
         }
       end
 
-      def xrmq_queue_setup(_channel, _queue, state) do
-        {:ok, state}
+      def xrmq_queue_setup(channel, queue, state) do
+        with \
+          %{bind_opts: opts} when opts != nil <- xrmq_get_queue_config(),
+          :ok <- AMQP.Queue.bind(channel, queue, opts[:exchange], opts[:extra_opts] || [])
+        do
+          {:ok, state}
+        else
+          %{bind_opts: nil} -> {:ok, state}
+          {:error, reason} -> {:error, reason, state}
+        end
       end
 
       def xrmq_basic_ack(delivery_tag, state) do
@@ -216,6 +226,7 @@ defmodule ExRabbitMQ.Consumer do
           queue: config[:queue],
           queue_opts: config[:queue_opts],
           consume_opts: config[:consume_opts],
+          bind_opts: config[:bind_opts],
         }
       end
 

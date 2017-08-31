@@ -11,11 +11,11 @@ defmodule ExRabbitMQTest do
     ExRabbitMQ.ConnectionSupervisor.start_link()
 
     # configuration for a default local RabbitMQ installation
-    connection_config = %ConnectionConfig{username: "guest", password: "guest", host: "127.0.0.1", reconnect_after: 500}
+    connection_config = %ConnectionConfig{username: "guest", password: "guest", host: "127.0.0.1", reconnect_after: 500, qos_opts: [prefetch_count: 1]}
     test_queue = "xrmq_test"
 
     # configuration for a test queue where we will publish to/consumer from
-    queue_config = %QueueConfig{queue: test_queue, queue_opts: [durable: false, auto_delete: true], consume_opts: [no_ack: true]}
+    queue_config = %QueueConfig{queue: test_queue, queue_opts: [durable: false, auto_delete: true], consume_opts: [no_ack: true], bind_opts: [exchange: "amq.direct", extra_opts: []]}
 
     # the test message to be published and then consumed
     test_message = "ExRabbitMQ test"
@@ -139,7 +139,8 @@ defmodule ExRabbitMQProducerTest do
     {:noreply, state}
   end
 
-  def xrmq_channel_setup(_channel, state) do
+  def xrmq_channel_setup(channel, state) do
+    {:ok, state} = super(channel, state)
     {:ok, Map.put(state, :producer_channel_setup_ok, true)}
   end
 end
@@ -190,11 +191,13 @@ defmodule ExRabbitMQConsumerTest do
     {:noreply, state}
   end
 
-  def xrmq_channel_setup(_channel, state) do
+  def xrmq_channel_setup(channel, state) do
+    {:ok, state} = super(channel, state)
     {:ok, Map.put(state, :consumer_channel_setup_ok, true)}
   end
 
-  def xrmq_queue_setup(_channel, queue, state) do
+  def xrmq_queue_setup(channel, queue, state) do
+    {:ok, state} = super(channel, queue, state)
     {:ok, Map.put(state, :consumer_queue_setup_ok, {:ok, queue})}
   end
 end

@@ -13,8 +13,16 @@ defmodule ExRabbitMQ.AST.Common do
   """
   def ast() do
     quote location: :keep do
-      def xrmq_channel_setup(_channel, state) do
-        {:ok, state}
+      def xrmq_channel_setup(channel, state) do
+        with \
+          %{qos_opts: opts} when opts != nil <- xrmq_get_connection_config(),
+          :ok <- AMQP.Basic.qos(channel, opts)
+        do
+          {:ok, state}
+        else
+          %{qos_opts: nil} -> {:ok, state}
+          {:error, reason} -> {:error, reason, state}
+        end
       end
 
       def xrmq_basic_cancel(cancellation_info, state) do
@@ -42,6 +50,7 @@ defmodule ExRabbitMQ.AST.Common do
           vhost: config[:vhost],
           heartbeat: config[:heartbeat],
           reconnect_after: config[:reconnect_after],
+          qos_opts: config[:qos_opts] || nil,
         }
       end
 
@@ -54,6 +63,7 @@ defmodule ExRabbitMQ.AST.Common do
           vhost: config.vhost || "/",
           heartbeat: config.heartbeat || 1000,
           reconnect_after: config.reconnect_after || 2000,
+          qos_opts: config.qos_opts || nil,
         }
       end
 
