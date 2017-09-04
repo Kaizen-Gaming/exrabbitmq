@@ -7,13 +7,13 @@ defmodule ExRabbitMQ.Connection do
 
   To correctly monitor the open channels, users must not open channels manually (e.g., in the provided hooks).
 
-  Internally, a connection `GenServer` uses `:pg2` and `:ets` to handle local subscriptions of consumers and producers.
+  Internally, a connection `GenServer` uses [`:pg2`](http://erlang.org/doc/man/pg2.html) and [`:ets`](http://erlang.org/doc/man/ets.html) to handle local subscriptions of consumers and producers.
 
-  `:pg2` is used to name the pool of connections to RabbitMQ.
+  [`:pg2`](http://erlang.org/doc/man/pg2.html) is used to name the pool of connections to RabbitMQ.
 
   Only local members are considered so clustering cannot cause problems with local subscriptions.
 
-  `:ets` is used to hold the subscriptions of consumers and producers that are using the table holding connection `GenServer` instance.
+  [`:ets`](http://erlang.org/doc/man/ets.html) is used to hold the subscriptions of consumers and producers that are using the table holding connection `GenServer` instance.
   """
   @module __MODULE__
 
