@@ -10,7 +10,7 @@ defmodule ExRabbitMQ.ConnectionConfig do
 
   ```elixir
   # :connection is this connection's configuration name
-  config :exrabbitmq, :connection,
+  config :exrabbitmq, :my_connection_config,
 
     # username for connecting to rabbitmq (distinct per connection configuration block)
     username: "username",

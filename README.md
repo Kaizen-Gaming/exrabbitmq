@@ -21,7 +21,7 @@ For more information on implementing a producer, see the documentation of the `E
 
 ## Installation
 
-1. Add `{:exrabbitmq, "~> X.Y.Z"}` ([https://hex.pm/packages/exrabbitmq](https://hex.pm/packages/exrabbitmq)) in your project's `deps` function in `mix.exs`
+1. Add `{:exrabbitmq, "~> X.Y"}` ([https://hex.pm/packages/exrabbitmq](https://hex.pm/packages/exrabbitmq)) in your project's `deps` function in `mix.exs`
 2. Run `mix deps.get` and `mix compile` in your project's root directory to download and compile the package
 
 ## Documentation

@@ -20,9 +20,9 @@ defmodule ExRabbitMQ.Producer do
       GenServer.start_link(@module, :ok)
     end
 
-    def init(:ok) do
+    def init(state) do
       new_state =
-        xrmq_init(:connection, state)
+        xrmq_init(:my_connection_config, state)
         |> xrmq_extract_state()
 
       {:ok, new_state}
@@ -175,17 +175,6 @@ defmodule ExRabbitMQ.Producer do
         xrmq_set_connection_config(connection_config)
 
         xrmq_open_channel(state)
-      end
-
-      def xrmq_basic_publish(payload, exchange, routing_key, opts \\ []) do
-        with\
-          {channel, _} when channel !== nil <- xrmq_get_channel_info(),
-          :ok <- AMQP.Basic.publish(channel, exchange, routing_key, payload, opts) do
-          :ok
-        else
-          {nil, _} -> {:error, Constants.no_channel_error()}
-          error -> {:error, error}
-        end
       end
 
       unquote(common_ast)

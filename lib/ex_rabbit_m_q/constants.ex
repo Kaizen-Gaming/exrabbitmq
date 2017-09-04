@@ -4,7 +4,7 @@ defmodule ExRabbitMQ.Constants do
   """
 
   @doc """
-  The :pg2 group name for the connections to RabbitMQ
+  The `:pg2` group name for the connections to RabbitMQ
   """
   def connection_pids_group_name(), do: "ExRabbitMQConnections"
 

@@ -1,6 +1,19 @@
 defmodule ExRabbitMQ.Connection do
   @moduledoc """
-  A GenServer implementing a long running connection to a RabbitMQ server, with embedded PubSub using :pg2 and :ets.
+  A `GenServer` implementing a long running connection to a RabbitMQ server.
+
+  Consumers and producers share connections and when a connection reaches the limit of
+  `65535` channels, a new connection is established.
+
+  To correctly monitor the open channels, users must not open channels manually (e.g., in the provided hooks).
+
+  Internally, a connection `GenServer` uses `:pg2` and `:ets` to handle local subscriptions of consumers and producers.
+
+  `:pg2` is used to name the pool of connections to RabbitMQ.
+
+  Only local members are considered so clustering cannot cause problems with local subscriptions.
+
+  `:ets` is used to hold the subscriptions of consumers and producers that are using the table holding connection `GenServer` instance.
   """
   @module __MODULE__
 

@@ -10,7 +10,7 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
 
   ```elixir
   # :queue is this queue's configuration name
-  config :exrabbitmq, :queue,
+  config :exrabbitmq, :my_queue_config,
 
     # name of the queue from which we wish to consume (optional, default: "")
     queue: "my_queue",

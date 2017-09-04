@@ -24,9 +24,9 @@ defmodule ExRabbitMQ.Consumer do
       GenServer.start_link(@module, :ok)
     end
 
-    def init(:ok) do
+    def init(state) do
       new_state =
-        xrmq_init(:connection, :queue, state)
+        xrmq_init(:my_connection_config, :my_queue_config, state)
         |> xrmq_extract_state()
 
       {:ok, new_state}
@@ -282,6 +282,15 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_basic_reject(delivery_tag :: String.t, opts :: term, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
+
+  @doc """
+  This overridable function publishes the `payload` to the `exchange` using the provided `routing_key`.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_basic_publish(payload :: term, exchange :: String.t, routing_key :: String.t, opts :: [term]) ::
+  :ok |
+  {:error, reason :: :blocked | :closing | :no_channel}
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.

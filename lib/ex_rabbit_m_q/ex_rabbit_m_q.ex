@@ -21,7 +21,7 @@ defmodule ExRabbitMQ do
 
   ## Installation
 
-  1. Add `{:exrabbitmq, "~> #{Mix.Project.config[:version]}"}` ([https://hex.pm/packages/exrabbitmq](https://hex.pm/packages/exrabbitmq)) in your project's `deps` function in `mix.exs`
+  1. Add `{:exrabbitmq, "~> #{Mix.Project.config[:version] |> Version.parse() |> elem(1) |> Map.take([:major, :minor]) |> (fn %{major: major, minor: minor} -> "#{major}.#{minor}" end).()}"}` ([https://hex.pm/packages/exrabbitmq](https://hex.pm/packages/exrabbitmq)) in your project's `deps` function in `mix.exs`
   2. Run `mix deps.get` and `mix compile` in your project's root directory to download and compile the package
 
   ## Documentation
