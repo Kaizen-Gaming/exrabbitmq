@@ -3,7 +3,7 @@ defmodule ExRabbitMQ.Mixfile do
 
   def project do
     [app: :exrabbitmq,
-     version: "2.4.0",
+     version: "2.4.1",
      elixir: "~> 1.5",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -30,8 +30,7 @@ defmodule ExRabbitMQ.Mixfile do
       name: "ExRabbitMQ",
       source_url: "https://github.com/StoiximanServices/exrabbitmq",
       homepage_url: "https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md",
-      docs: [main: "exrabbitmq",
-             logo: "logo.png"],
+      docs: [main: "ExRabbitMQ", logo: "logo.png"],
       description: "A thin, boilerplate hiding wrapper for https://github.com/pma/amqp (RabbitMQ client library)",
       package: [
         maintainers: ["sadesyllas"],
