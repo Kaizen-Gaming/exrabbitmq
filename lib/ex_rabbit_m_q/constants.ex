@@ -13,6 +13,9 @@ defmodule ExRabbitMQ.Constants do
   """
   def connection_pid_key(), do: :xrmq_connection_pid
 
+  @doc false
+  def channel_ripper_pid_key(), do: :xrmq_channel_ripper_pid
+
   @doc """
   The key in the process dictionary holding the connection configuration used by consumers and producers.
   """

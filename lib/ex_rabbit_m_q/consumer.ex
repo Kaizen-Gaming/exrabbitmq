@@ -322,6 +322,7 @@ defmodule ExRabbitMQ.Consumer do
       alias ExRabbitMQ.Connection
       alias ExRabbitMQ.ConnectionConfig
       alias ExRabbitMQ.Consumer.QueueConfig
+      alias ExRabbitMQ.ChannelRipper
 
       unquote(inner_ast)
 
@@ -372,6 +373,10 @@ defmodule ExRabbitMQ.Consumer do
         xrmq_set_connection_pid(connection_pid)
         xrmq_set_connection_config(connection_config)
         xrmq_set_queue_config(queue_config)
+
+        {:ok, channel_ripper_pid} = ChannelRipper.start_link()
+
+        xrmq_set_channel_ripper_pid(channel_ripper_pid)
 
         if start_consuming do
           xrmq_open_channel_consume(state)

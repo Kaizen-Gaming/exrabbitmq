@@ -139,6 +139,7 @@ defmodule ExRabbitMQ.Producer do
       alias ExRabbitMQ.Constants
       alias ExRabbitMQ.Connection
       alias ExRabbitMQ.ConnectionConfig
+      alias ExRabbitMQ.ChannelRipper
 
       unquote(inner_ast)
 
@@ -173,6 +174,10 @@ defmodule ExRabbitMQ.Producer do
 
         xrmq_set_connection_pid(connection_pid)
         xrmq_set_connection_config(connection_config)
+
+        {:ok, channel_ripper_pid} = ChannelRipper.start_link()
+
+        xrmq_set_channel_ripper_pid(channel_ripper_pid)
 
         xrmq_open_channel(state)
       end

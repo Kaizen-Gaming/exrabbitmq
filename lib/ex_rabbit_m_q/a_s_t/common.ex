@@ -107,6 +107,14 @@ defmodule ExRabbitMQ.AST.Common do
         end
       end
 
+      defp xrmq_set_channel_ripper_pid(channel_ripper_pid) do
+        Process.put(Constants.channel_ripper_pid_key(), channel_ripper_pid)
+      end
+
+      defp xrmq_get_channel_ripper_pid() do
+        Process.get(Constants.channel_ripper_pid_key())
+      end
+
       defp xrmq_get_channel_info() do
         {Process.get(Constants.channel_key()), Process.get(Constants.channel_monitor_key())}
       end
@@ -126,6 +134,8 @@ defmodule ExRabbitMQ.AST.Common do
           {:ok, connection} ->
             case AMQP.Channel.open(connection) do
               {:ok, %AMQP.Channel{pid: pid} = channel} ->
+                ChannelRipper.set_channel(xrmq_get_channel_ripper_pid(), channel)
+
                 channel_monitor = Process.monitor(pid)
 
                 xrmq_set_channel_info(channel, channel_monitor)
