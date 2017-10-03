@@ -4,18 +4,16 @@ defmodule ExRabbitMQ.ChannelRipper do
 
   use GenServer
 
-  def start_link() do
-    GenServer.start_link(@module, %{linked_pid: self(), channel: nil})
+  def start() do
+    GenServer.start(@module, %{monitored_pid: self(), channel: nil})
   end
 
   def set_channel(channel_ripper_pid, channel) do
     GenServer.call(channel_ripper_pid, {:set_channel, channel})
   end
 
-  def init(%{linked_pid: linked_pid} = state) do
-    Process.flag(:trap_exit, true)
-
-    Process.link(linked_pid)
+  def init(%{monitored_pid: monitored_pid} = state) do
+    Process.monitor(monitored_pid)
 
     {:ok, state}
   end
@@ -26,11 +24,11 @@ defmodule ExRabbitMQ.ChannelRipper do
     {:reply, :ok, new_state}
   end
 
-  def handle_info({:EXIT, _from, _reason}, %{channel: nil} = state) do
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %{channel: nil} = state) do
     {:stop, :normal, state}
   end
 
-  def handle_info({:EXIT, _from, _reason}, %{channel: channel} = state) do
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %{channel: channel} = state) do
     AMQP.Channel.close(channel)
 
     {:stop, :normal, state}

@@ -76,6 +76,7 @@ defmodule ExRabbitMQTest do
     # we stop everything
     ExRabbitMQConsumerTest.stop(consumer)
     ExRabbitMQProducerTest.stop(producer)
+
     Connection.close(consumer_connection_pid)
     Connection.close(producer_connection_pid)
 

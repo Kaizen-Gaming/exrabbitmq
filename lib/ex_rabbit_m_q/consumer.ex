@@ -374,7 +374,7 @@ defmodule ExRabbitMQ.Consumer do
         xrmq_set_connection_config(connection_config)
         xrmq_set_queue_config(queue_config)
 
-        {:ok, channel_ripper_pid} = ChannelRipper.start_link()
+        {:ok, channel_ripper_pid} = ChannelRipper.start()
 
         xrmq_set_channel_ripper_pid(channel_ripper_pid)
 
