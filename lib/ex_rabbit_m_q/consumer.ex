@@ -320,7 +320,7 @@ defmodule ExRabbitMQ.Consumer do
 
       alias ExRabbitMQ.Constants
       alias ExRabbitMQ.Connection
-      alias ExRabbitMQ.ConnectionConfig
+      alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
       alias ExRabbitMQ.Consumer.QueueConfig
       alias ExRabbitMQ.ChannelRipper
 
@@ -361,7 +361,7 @@ defmodule ExRabbitMQ.Consumer do
         connection_pid =
           case Enum.find(connection_pids, fn c -> Connection.subscribe(c, connection_config) end) do
             nil ->
-              {:ok, pid} = ExRabbitMQ.ConnectionSupervisor.start_child(connection_config)
+              {:ok, pid} = ExRabbitMQ.Connection.Supervisor.start_child(connection_config)
               Connection.subscribe(pid, connection_config)
               pid
             pid ->

@@ -1,4 +1,4 @@
-defmodule ExRabbitMQ.ConnectionConfig do
+defmodule ExRabbitMQ.Connection.Config do
   @moduledoc """
   A stucture holding the necessary information about a connection to a RabbitMQ node.
 

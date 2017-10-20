@@ -1,11 +1,11 @@
-defmodule ExRabbitMQ.ConnectionSupervisor do
+defmodule ExRabbitMQ.Connection.Supervisor do
   @moduledoc """
   A supervisor using the :simple_one_for_one strategy to serve as a template
   for spawning new RabbitMQ connection (module `ExRabbitMQ.Connection`) processes.
   """
   @module __MODULE__
 
-  use Supervisor
+  use Supervisor, start: {@module, :start_link, []}
 
   def start_link() do
     Supervisor.start_link(@module, :ok, name: @module)

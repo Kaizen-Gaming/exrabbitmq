@@ -22,7 +22,7 @@ defmodule ExRabbitMQ.Connection do
   require Logger
 
   alias ExRabbitMQ.Connection
-  alias ExRabbitMQ.ConnectionConfig
+  alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
   alias ExRabbitMQ.Constants
 
   defstruct [:connection, :connection_pid, :ets_consumers, config: %ConnectionConfig{}, stale?: false]

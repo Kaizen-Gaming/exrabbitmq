@@ -2,13 +2,13 @@ defmodule ExRabbitMQTest do
   use ExUnit.Case
 
   alias ExRabbitMQ.Connection
-  alias ExRabbitMQ.ConnectionConfig
+  alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
   alias ExRabbitMQ.Consumer.QueueConfig
 
   test "publishing a message and then consuming it" do
     # first we start the connection supervisor
     # it holds the template for the GenServer wrapping connections to RabbitMQ
-    ExRabbitMQ.ConnectionSupervisor.start_link()
+    ExRabbitMQ.Connection.Supervisor.start_link()
 
     # configuration for a default local RabbitMQ installation
     connection_config = %ConnectionConfig{username: "guest", password: "guest", host: "127.0.0.1", reconnect_after: 500, qos_opts: [prefetch_count: 1]}
