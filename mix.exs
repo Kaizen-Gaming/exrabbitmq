@@ -2,12 +2,14 @@ defmodule ExRabbitMQ.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :exrabbitmq,
-     version: "2.8.0",
-     elixir: "~> 1.5",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     deps: deps()]
+    [
+      app: :exrabbitmq,
+      version: "2.9.0",
+      elixir: "~> 1.5",
+      build_embedded: Mix.env == :prod,
+      start_permanent: Mix.env == :prod,
+      deps: deps()
+    ]
     |> merge_package_info()
   end
 
@@ -18,9 +20,9 @@ defmodule ExRabbitMQ.Mixfile do
   defp deps do
     [
       {:credo, "~> 0.8.1", runtime: false},
-      {:dialyxir, "~> 0.5.0", only: [:dev]},
+      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.16.2", runtime: false},
       {:amqp, "~> 0.2.3"},
-      {:ex_doc, "~> 0.16.2"},
     ]
   end
 
@@ -33,10 +35,10 @@ defmodule ExRabbitMQ.Mixfile do
       docs: [main: "ExRabbitMQ", logo: "logo.png"],
       description: "A thin, boilerplate hiding wrapper for https://github.com/pma/amqp (RabbitMQ client library)",
       package: [
-        maintainers: ["sadesyllas"],
+        maintainers: ["sadesyllas", "indyone"],
         licenses: ["MIT"],
         links: %{"Github" => "https://github.com/StoiximanServices/exrabbitmq"}
-      ],
+      ]
     ])
   end
 end

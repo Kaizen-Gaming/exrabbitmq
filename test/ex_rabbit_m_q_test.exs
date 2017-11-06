@@ -11,11 +11,26 @@ defmodule ExRabbitMQTest do
     ExRabbitMQ.Connection.Supervisor.start_link()
 
     # configuration for a default local RabbitMQ installation
-    connection_config = %ConnectionConfig{username: "guest", password: "guest", host: "127.0.0.1", reconnect_after: 500, qos_opts: [prefetch_count: 1]}
+    connection_config = %ConnectionConfig{
+      username: "guest",
+      password: "guest",
+      host: "127.0.0.1",
+      reconnect_after: 500,
+      qos_opts: [prefetch_count: 1]
+    }
+
     test_queue = "xrmq_test"
+    test_exchange = "xrmq_test_exchange"
 
     # configuration for a test queue where we will publish to/consumer from
-    queue_config = %QueueConfig{queue: test_queue, queue_opts: [durable: false, auto_delete: true], consume_opts: [no_ack: true], bind_opts: [exchange: "amq.direct", extra_opts: []]}
+    queue_config = %QueueConfig{
+      queue: test_queue,
+      queue_opts: [durable: false, auto_delete: true],
+      consume_opts: [no_ack: true],
+      exchange: test_exchange,
+      exchange_opts: [type: :direct, durable: false, auto_delete: true],
+      bind_opts: []
+    }
 
     # the test message to be published and then consumed
     test_message = "ExRabbitMQ test"
@@ -67,8 +82,6 @@ defmodule ExRabbitMQTest do
 
     # the producer tells us that the message has been published
     assert_receive({:publish, :ok}, 500, "failed to publish test message #{test_message}")
-
-
 
     # the consumer tells us that the message that we published is the same we have consumed
     assert_receive({:consume, ^test_message}, 500, "failed to receive test message #{test_message}")
