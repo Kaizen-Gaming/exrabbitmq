@@ -3,7 +3,7 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
   A stucture holding the necessary information about a queue that is to be consumed.
 
   ```elixir
-  defstruct [:queue, :queue_opts, :consume_opts, :bind_opts]
+  defstruct [:queue, :queue_opts, :consume_opts, :exchange, :exchange_opts, :bind_opts]
   ```
 
   #### Queue configuration example:
@@ -21,19 +21,33 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
     # properties set on the call to consume from the queue (optional, default: [])
     consume_opts: [no_ack: false],
 
-    # the options to use when one wants to do a non default binding to an exchange (optional, default: nil)
+    # the exchange name to declare and bind (optional, default: nil)
+    exchange: "my_exchange",
+
+    # the options to use when one wants to declare the exchange (optional, default: [])
+    exchange_opts: [
+
+      # the exchange type to declare (optional, default: :direct)
+      # this is an atom that can have one of the following values:
+      # :direct, :fanout, :topic or :headers
+      type: :fanout,
+
+      # other exchange declare options as documented in the Options paragraph of
+      # https://hexdocs.pm/amqp/AMQP.Exchange.html#declare/4, eg.:
+      durable: true,
+      auto_delete: true,
+      passive: false,
+      internal: false
+    ]
+
+    # the options to use when binding the queue to the exchange (optional, default: [])
     bind_opts: [
-
-      # the exchange to bind to (required when bind_opts has been provided)
-      exchange: "my_exchange",
-
-      # extra options to pass to the RabbitMQ call (optional, default: [])
-      extra_opts: [
-        "routing_key": "my_routing_key"
-      ]
+      routing_key: "my_routing_key",
+      nowait: false,
+      arguments: []
     ]
   ```
   """
 
-  defstruct [:queue, :queue_opts, :consume_opts, :bind_opts]
+  defstruct [:queue, :queue_opts, :consume_opts, :exchange, :exchange_opts, :bind_opts]
 end

@@ -289,13 +289,13 @@ defmodule ExRabbitMQ.Consumer do
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
   @callback xrmq_basic_publish(payload :: term, exchange :: String.t, routing_key :: String.t, opts :: [term]) ::
-  :ok |
-  {:error, reason :: :blocked | :closing | :no_channel}
+    :ok |
+    {:error, reason :: :blocked | :closing | :no_channel}
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.
   """
-  @callback xrmq_extract_state({:ok, state :: term}|{:error, reason :: term, state :: term}) ::
+  @callback xrmq_extract_state({:ok, state :: term} | {:error, reason :: term, state :: term}) ::
     state :: term
 
   require ExRabbitMQ.AST.Common
@@ -344,8 +344,7 @@ defmodule ExRabbitMQ.Consumer do
         xrmq_init(connection_config, xrmq_get_queue_config(queue_key), start_consuming, state)
       end
 
-      def xrmq_init(%ConnectionConfig{} = connection_config, %QueueConfig{} = queue_config,
-        start_consuming, state) do
+      def xrmq_init(%ConnectionConfig{} = connection_config, %QueueConfig{} = queue_config, start_consuming, state) do
         connection_config = xrmq_set_connection_config_defaults(connection_config)
         queue_config = xrmq_set_queue_config_defaults(queue_config)
 
@@ -393,10 +392,10 @@ defmodule ExRabbitMQ.Consumer do
         else
           with \
             {:ok, %{queue: queue}} <- AMQP.Queue.declare(channel, config.queue, config.queue_opts),
-            {:ok, new_state} <- xrmq_queue_setup(channel, queue, state),
+            {:ok, state} <- xrmq_queue_setup(channel, queue, state),
             {:ok, _} <- AMQP.Basic.consume(channel, queue, nil, config.consume_opts)
           do
-            {:ok, new_state}
+            {:ok, state}
           else
             {:error, reason, state} = error -> error
             {:error, reason} -> {:error, reason, state}
@@ -410,20 +409,40 @@ defmodule ExRabbitMQ.Consumer do
           queue: config.queue || "",
           queue_opts: config.queue_opts || [],
           consume_opts: config.consume_opts || [],
-          bind_opts: config.bind_opts || nil,
+          exchange: config.exchange || nil,
+          exchange_opts: config.exchange_opts || [],
+          bind_opts: config.bind_opts || []
         }
       end
 
       def xrmq_queue_setup(channel, queue, state) do
+        queue_config = xrmq_get_queue_config()
         with \
-          %{bind_opts: opts} when opts != nil <- xrmq_get_queue_config(),
-          :ok <- AMQP.Queue.bind(channel, queue, opts[:exchange], opts[:extra_opts] || [])
+          :ok <- xrmq_exchange_declare(channel, queue_config),
+          :ok <- xrmq_queue_bind(channel, queue, queue_config)
         do
           {:ok, state}
         else
-          %{bind_opts: nil} -> {:ok, state}
           {:error, reason} -> {:error, reason, state}
         end
+      end
+
+      defp xrmq_exchange_declare(channel, %{exchange: nil}) do
+        # Ignore when not set
+        :ok
+      end
+
+      defp xrmq_exchange_declare(channel, %{exchange: exchange, exchange_opts: opts}) do
+        AMQP.Exchange.declare(channel, exchange, opts[:type] || :direct, opts)
+      end
+
+      defp xrmq_queue_bind(channel, queue, %{exchange: nil}) do
+        # Ignore when not set
+        :ok
+      end
+
+      defp xrmq_queue_bind(channel, queue, %{exchange: exchange, bind_opts: opts}) do
+        AMQP.Queue.bind(channel, queue, exchange, opts)
       end
 
       def xrmq_basic_ack(delivery_tag, state) do
@@ -475,7 +494,8 @@ defmodule ExRabbitMQ.Consumer do
           queue: config[:queue],
           queue_opts: config[:queue_opts],
           consume_opts: config[:consume_opts],
-          bind_opts: config[:bind_opts],
+          exchange_opts: config[:exchange_opts],
+          bind_opts: config[:bind_opts]
         }
       end
 
@@ -488,9 +508,10 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       defp xrmq_open_channel_consume(state) do
-        with\
-          {:ok, new_state} <- xrmq_open_channel(state),
-          {:ok, new_state} = result_ok <- xrmq_consume(new_state) do
+        with \
+          {:ok, state} <- xrmq_open_channel(state),
+          {:ok, state} = result_ok <- xrmq_consume(state)
+        do
           result_ok
         else
           error -> error
