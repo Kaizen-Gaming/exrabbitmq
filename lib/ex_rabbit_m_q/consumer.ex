@@ -39,23 +39,19 @@ defmodule ExRabbitMQ.Consumer do
       {:noreply, state}
     end
 
-    # optional override
+    # optional override when there is a need to do setup the channel right after the connection has been established.
     def xrmq_channel_setup(channel, state) do
-      # the default channel setup uses the optinal qos_opts from
-      # the connection's configuration so we can use it
-      # automatically by calling super,
-      # unless we want to override everything
-      {:ok, state} = super(channel, state)
+      # any channel setup goes here...
 
-      # any other channel setup goes here...
+      {:ok, state}
     end
 
-    # optional override
+    # optional override when there is a need to setup the queue and/or exchange just before the consume.
     def xrmq_queue_setup(channel, queue, state) do
-      # the default queue setup uses the optional bind_opts from
-      # the queue's configuration so we can use it
-      # automatically by calling super,
-      # unless we want to override everything
+      # The default queue setup uses the exchange, exchange_opts, bind_opts and qos_opts from
+      # the queue's configuration to setup the QoS, declare the exchange and bind it with the queue.
+      # Your can override this function, but you can also keep this functionality of the automatic queue setup by
+      # calling super, eg:
       {:ok, state} = super(channel, queue, state)
 
       # any other queue setup goes here...
@@ -205,6 +201,8 @@ defmodule ExRabbitMQ.Consumer do
   This hook is called automatically as part of the flow in `c:xrmq_consume/1`.
 
   It allows the user to run extra queue setup steps when the queue has been declared.
+  The default queue setup uses the exchange, exchange_opts, bind_opts and qos_opts from
+  the queue's configuration to setup the QoS, declare the exchange and bind it with the queue.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
@@ -384,8 +382,20 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
+      defp xrmq_open_channel_consume(state) do
+        with \
+          {:ok, state} <- xrmq_open_channel(state),
+          {:ok, state} = result_ok <- xrmq_consume(state)
+        do
+          result_ok
+        else
+          error -> error
+        end
+      end
+
       def xrmq_consume(state) do
-        {{channel, _}, config} = {xrmq_get_channel_info(), xrmq_get_queue_config()}
+        {channel, _} = xrmq_get_channel_info()
+        config = xrmq_get_queue_config()
 
         if channel === nil or config === nil do
           nil
@@ -404,22 +414,12 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
-      defp xrmq_set_queue_config_defaults(%QueueConfig{} = config) do
-        %QueueConfig{
-          queue: config.queue || "",
-          queue_opts: config.queue_opts || [],
-          consume_opts: config.consume_opts || [],
-          exchange: config.exchange || nil,
-          exchange_opts: config.exchange_opts || [],
-          bind_opts: config.bind_opts || []
-        }
-      end
-
       def xrmq_queue_setup(channel, queue, state) do
-        queue_config = xrmq_get_queue_config()
+        config = xrmq_get_queue_config()
         with \
-          :ok <- xrmq_exchange_declare(channel, queue_config),
-          :ok <- xrmq_queue_bind(channel, queue, queue_config)
+          :ok <- xrmq_qos_setup(channel, config),
+          :ok <- xrmq_exchange_declare(channel, config),
+          :ok <- xrmq_queue_bind(channel, queue, config)
         do
           {:ok, state}
         else
@@ -427,8 +427,15 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
-      defp xrmq_exchange_declare(channel, %{exchange: nil}) do
-        # Ignore when not set
+      defp xrmq_qos_setup(_channel, %{qos_opts: []}) do
+        :ok
+      end
+
+      defp xrmq_qos_setup(channel, %{qos_opts: opts}) do
+        AMQP.Basic.qos(channel, opts)
+      end
+
+      defp xrmq_exchange_declare(_channel, %{exchange: nil}) do
         :ok
       end
 
@@ -436,8 +443,7 @@ defmodule ExRabbitMQ.Consumer do
         AMQP.Exchange.declare(channel, exchange, opts[:type] || :direct, opts)
       end
 
-      defp xrmq_queue_bind(channel, queue, %{exchange: nil}) do
-        # Ignore when not set
+      defp xrmq_queue_bind(_channel, _queue, %{exchange: nil}) do
         :ok
       end
 
@@ -483,6 +489,18 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
+      defp xrmq_set_queue_config_defaults(%QueueConfig{} = config) do
+        %QueueConfig{
+          queue: config.queue || "",
+          queue_opts: config.queue_opts || [],
+          consume_opts: config.consume_opts || [],
+          exchange: config.exchange || nil,
+          exchange_opts: config.exchange_opts || [],
+          bind_opts: config.bind_opts || [],
+          qos_opts: config.qos_opts || [],
+        }
+      end
+
       def xrmq_get_queue_config() do
         Process.get(Constants.queue_config_key())
       end
@@ -495,7 +513,8 @@ defmodule ExRabbitMQ.Consumer do
           queue_opts: config[:queue_opts],
           consume_opts: config[:consume_opts],
           exchange_opts: config[:exchange_opts],
-          bind_opts: config[:bind_opts]
+          bind_opts: config[:bind_opts],
+          qos_opts: config[:qos_opts],
         }
       end
 
@@ -504,17 +523,6 @@ defmodule ExRabbitMQ.Consumer do
           Process.delete(Constants.queue_config_key())
         else
           Process.put(Constants.queue_config_key(), config)
-        end
-      end
-
-      defp xrmq_open_channel_consume(state) do
-        with \
-          {:ok, state} <- xrmq_open_channel(state),
-          {:ok, state} = result_ok <- xrmq_consume(state)
-        do
-          result_ok
-        else
-          error -> error
         end
       end
 

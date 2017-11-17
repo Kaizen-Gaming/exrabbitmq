@@ -3,7 +3,7 @@ defmodule ExRabbitMQ.Connection.Config do
   A stucture holding the necessary information about a connection to a RabbitMQ node.
 
   ```elixir
-  defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after, :qos_opts]
+  defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]
   ```
 
   #### Connection configuration example:
@@ -32,11 +32,8 @@ defmodule ExRabbitMQ.Connection.Config do
 
     # the delay after which a connection wil be re-attempted after having been dropped (optional, default: 2000)
     reconnect_after: 2000,
-
-    # the options to use for specifying QoS properties on a channel (optional, default: nil)
-    qos_opts: nil
   ```
   """
 
-  defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after, :qos_opts]
+  defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]
 end

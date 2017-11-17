@@ -15,8 +15,7 @@ defmodule ExRabbitMQTest do
       username: "guest",
       password: "guest",
       host: "127.0.0.1",
-      reconnect_after: 500,
-      qos_opts: [prefetch_count: 1]
+      reconnect_after: 500
     }
 
     test_queue = "xrmq_test"
@@ -26,10 +25,11 @@ defmodule ExRabbitMQTest do
     queue_config = %QueueConfig{
       queue: test_queue,
       queue_opts: [durable: false, auto_delete: true],
-      consume_opts: [no_ack: true],
       exchange: test_exchange,
       exchange_opts: [type: :direct, durable: false, auto_delete: true],
-      bind_opts: []
+      bind_opts: [],
+      qos_opts: [prefetch_count: 1],
+      consume_opts: [no_ack: true]
     }
 
     # the test message to be published and then consumed
