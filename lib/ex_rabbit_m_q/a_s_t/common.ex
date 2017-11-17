@@ -13,6 +13,7 @@ defmodule ExRabbitMQ.AST.Common do
   It also holds the AST necessary to open a channel when an AMQP connection is ready.
   """
   def ast() do
+    # credo:disable-for-previous-line
     quote location: :keep do
       def xrmq_channel_setup(channel, state) do
         {:ok, state}

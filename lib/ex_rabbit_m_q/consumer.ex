@@ -76,7 +76,7 @@ defmodule ExRabbitMQ.Consumer do
 
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
   """
-  @callback xrmq_init(connection_key :: atom, queue_key :: atom, start_consuming :: true|false, state :: term) ::
+  @callback xrmq_init(connection_key :: atom, queue_key :: atom, start_consuming :: boolean, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
 
@@ -98,7 +98,7 @@ defmodule ExRabbitMQ.Consumer do
 
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
   """
-  @callback xrmq_init(connection_key :: atom, queue_config :: struct, start_consuming :: true|false, state :: term) ::
+  @callback xrmq_init(connection_key :: atom, queue_config :: struct, start_consuming :: boolean, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
 
@@ -120,7 +120,7 @@ defmodule ExRabbitMQ.Consumer do
 
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
   """
-  @callback xrmq_init(connection_config :: struct, queue_key :: atom, start_consuming :: true|false, state :: term) ::
+  @callback xrmq_init(connection_config :: struct, queue_key :: atom, start_consuming :: boolean, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
 
@@ -140,7 +140,7 @@ defmodule ExRabbitMQ.Consumer do
 
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
   """
-  @callback xrmq_init(connection_config :: struct, queue_config :: struct, start_consuming :: true|false, state :: term) ::
+  @callback xrmq_init(connection_config :: struct, queue_config :: struct, start_consuming :: boolean, state :: term) ::
     {:ok, new_state :: term} |
     {:error, reason :: term, new_state :: term}
 
@@ -300,6 +300,7 @@ defmodule ExRabbitMQ.Consumer do
   require ExRabbitMQ.AST.Consumer.GenServer
   require ExRabbitMQ.AST.Consumer.GenStage
 
+  # credo:disable-for-next-line
   defmacro __using__({:__aliases__, _, [kind]})
   when kind in [:GenServer, :GenStage] do
     common_ast = ExRabbitMQ.AST.Common.ast()
@@ -311,6 +312,7 @@ defmodule ExRabbitMQ.Consumer do
         ExRabbitMQ.AST.Consumer.GenStage.ast()
       end
 
+    # credo:disable-for-next-line
     quote location: :keep do
       require Logger
 
@@ -528,7 +530,13 @@ defmodule ExRabbitMQ.Consumer do
 
       unquote(common_ast)
 
-      defoverridable xrmq_queue_setup: 3, xrmq_basic_cancel: 2, xrmq_basic_ack: 2, xrmq_basic_reject: 2, xrmq_basic_reject: 3
+      defoverridable [
+        xrmq_queue_setup: 3,
+        xrmq_basic_cancel: 2,
+        xrmq_basic_ack: 2,
+        xrmq_basic_reject: 2,
+        xrmq_basic_reject: 3
+      ]
     end
   end
 end

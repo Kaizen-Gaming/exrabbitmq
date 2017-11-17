@@ -1,4 +1,11 @@
 defmodule ExRabbitMQ do
+
+  @version Mix.Project.config[:version]
+           |> Version.parse()
+           |> elem(1)
+           |> Map.take([:major, :minor])
+           |> (fn %{major: major, minor: minor} -> "#{major}.#{minor}" end).()
+
   @moduledoc """
   A project providing the following abstractions:
 
@@ -12,8 +19,8 @@ defmodule ExRabbitMQ do
   1. Make it unnecessary for the programmer to directly handle connections and channels
   2. Reduce the boilerplate when creating new projects that interact with RabbitMQ
 
-  As such, hooks are provided to enable the programmer to handle message delivery, cancellation, acknowlegement, rejection
-  as well as publishing.
+  As such, hooks are provided to enable the programmer to handle message delivery, cancellation, acknowlegement,
+  rejection as well as publishing.
 
   For more information on implementing a consumer, see the documentation of the `ExRabbitMQ.Consumer` behaviour.
 
@@ -21,7 +28,8 @@ defmodule ExRabbitMQ do
 
   ## Installation
 
-  1. Add `{:exrabbitmq, "~> #{Mix.Project.config[:version] |> Version.parse() |> elem(1) |> Map.take([:major, :minor]) |> (fn %{major: major, minor: minor} -> "#{major}.#{minor}" end).()}"}` ([https://hex.pm/packages/exrabbitmq](https://hex.pm/packages/exrabbitmq)) in your project's `deps` function in `mix.exs`
+  1. Add `{:exrabbitmq, "~> #{@version}"}` ([https://hex.pm/packages/exrabbitmq](https://hex.pm/packages/exrabbitmq))
+     in your project's `deps` function in `mix.exs`
   2. Run `mix deps.get` and `mix compile` in your project's root directory to download and compile the package
 
   ## Documentation
