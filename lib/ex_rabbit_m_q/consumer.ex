@@ -514,6 +514,7 @@ defmodule ExRabbitMQ.Consumer do
           queue: config[:queue],
           queue_opts: config[:queue_opts],
           consume_opts: config[:consume_opts],
+          exchange: config[:exchange],
           exchange_opts: config[:exchange_opts],
           bind_opts: config[:bind_opts],
           qos_opts: config[:qos_opts],
