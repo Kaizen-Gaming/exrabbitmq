@@ -15,7 +15,11 @@ defmodule ExRabbitMQ.AST.Common do
   def ast() do
     # credo:disable-for-previous-line
     quote location: :keep do
-      def xrmq_channel_setup(channel, state) do
+      def xrmq_channel_setup(_channel, state) do
+        {:ok, state}
+      end
+
+      def xrmq_channel_open(_channel, state) do
         {:ok, state}
       end
 
@@ -133,7 +137,9 @@ defmodule ExRabbitMQ.AST.Common do
 
                 Logger.debug("opened a new channel")
 
-                xrmq_channel_setup(channel, state)
+                with {:ok, state} <- xrmq_channel_setup(channel, state) do
+                  xrmq_channel_open(channel, state)
+                end
               :closing ->
                 xrmq_set_channel_info(nil, nil)
 
@@ -152,7 +158,7 @@ defmodule ExRabbitMQ.AST.Common do
         end
       end
 
-      defoverridable xrmq_channel_setup: 2
+      defoverridable xrmq_channel_setup: 2, xrmq_channel_open: 2
     end
   end
 end

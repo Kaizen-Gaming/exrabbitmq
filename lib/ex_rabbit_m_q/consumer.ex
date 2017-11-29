@@ -180,6 +180,16 @@ defmodule ExRabbitMQ.Consumer do
     {:error, reason :: term, new_state :: term}
 
   @doc """
+  This hook is called when a connection has been established and a new channel has been opened,
+  right after `c:xrmq_channel_setup/2`.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_channel_open(channel :: term, state :: term) ::
+    {:ok, new_state :: term} |
+    {:error, reason :: term, new_state :: term}
+
+  @doc """
   This hook is called automatically, if `start_consuming` was `true` when `c:xrmq_init/4`.
 
   If not, then the user has to call it to start consuming.
