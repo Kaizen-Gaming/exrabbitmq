@@ -4,31 +4,33 @@ defmodule ExRabbitMQ.Mixfile do
   def project do
     [
       app: :exrabbitmq,
-      version: "2.11.0",
+      version: "2.11.1",
       elixir: "~> 1.5",
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
     |> merge_package_info()
   end
 
   def application do
-    [extra_applications: [:logger]]
+    [
+      extra_applications: [:logger]
+    ]
   end
 
   defp deps do
     [
-      {:credo, "~> 0.8.1", runtime: false},
-      {:dialyxir, "~> 0.5.0", only: [:dev], runtime: false},
-      {:ex_doc, "~> 0.16.2", runtime: false},
-      {:amqp, "~> 0.3.0"},
+      {:credo, "~> 0.8", runtime: false},
+      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.18", runtime: false},
+      {:amqp, "~> 0.3"}
     ]
   end
 
   defp merge_package_info(project_spec) do
     project_spec
-    |> Keyword.merge([
+    |> Keyword.merge(
       name: "ExRabbitMQ",
       source_url: "https://github.com/StoiximanServices/exrabbitmq",
       homepage_url: "https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md",
@@ -39,6 +41,6 @@ defmodule ExRabbitMQ.Mixfile do
         licenses: ["MIT"],
         links: %{"Github" => "https://github.com/StoiximanServices/exrabbitmq"}
       ]
-    ])
+    )
   end
 end

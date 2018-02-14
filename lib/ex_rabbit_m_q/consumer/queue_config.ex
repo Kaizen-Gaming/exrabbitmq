@@ -47,7 +47,7 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
     ],
 
     # the options to use for specifying QoS properties on a channel (optional, default: [])
-    qos_opts: [}
+    qos_opts: [
       prefect_size: 1,
       prefetch_count: 1,
       global: true

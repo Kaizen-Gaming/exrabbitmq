@@ -7,7 +7,7 @@ defmodule ExRabbitMQ.Consumer do
   It also provides hooks to allow the programmer to wrap the consumption of a message without having to directly
   access the AMPQ interfaces.
 
-  For a connection configuration example see `ExRabbitMQ.ConnectionConfig`.
+  For a connection configuration example see `ExRabbitMQ.Connection.Config`.
 
   For a queue configuration example see `ExRabbitMQ.Consumer.QueueConfig`.
 
