@@ -19,8 +19,10 @@ defmodule ExRabbitMQ.Connection.Supervisor do
       Supervisor.child_spec(
         ExRabbitMQ.Connection,
         start: {ExRabbitMQ.Connection, :start_link, []},
-        restart: :transient)
+        restart: :transient
+      )
     ]
+
     options = [strategy: :simple_one_for_one]
     Supervisor.init(children, options)
   end

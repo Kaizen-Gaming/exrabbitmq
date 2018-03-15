@@ -1,6 +1,5 @@
 defmodule ExRabbitMQ do
-
-  @version Mix.Project.config[:version]
+  @version Mix.Project.config()[:version]
            |> Version.parse()
            |> elem(1)
            |> Map.take([:major, :minor])

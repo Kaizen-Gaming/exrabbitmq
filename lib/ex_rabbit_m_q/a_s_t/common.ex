@@ -38,9 +38,8 @@ defmodule ExRabbitMQ.AST.Common do
       end
 
       def xrmq_basic_publish(payload, exchange, routing_key, opts \\ []) do
-        with\
-          {channel, _} when channel !== nil <- xrmq_get_channel_info(),
-          :ok <- AMQP.Basic.publish(channel, exchange, routing_key, payload, opts) do
+        with {channel, _} when channel !== nil <- xrmq_get_channel_info(),
+             :ok <- AMQP.Basic.publish(channel, exchange, routing_key, payload, opts) do
           :ok
         else
           {nil, _} -> {:error, Constants.no_channel_error()}
@@ -66,7 +65,7 @@ defmodule ExRabbitMQ.AST.Common do
           port: config[:port],
           vhost: config[:vhost],
           heartbeat: config[:heartbeat],
-          reconnect_after: config[:reconnect_after],
+          reconnect_after: config[:reconnect_after]
         }
       end
 
@@ -78,7 +77,7 @@ defmodule ExRabbitMQ.AST.Common do
           port: config.port || 5672,
           vhost: config.vhost || "/",
           heartbeat: config.heartbeat || 1000,
-          reconnect_after: config.reconnect_after || 2000,
+          reconnect_after: config.reconnect_after || 2000
         }
       end
 
@@ -140,10 +139,12 @@ defmodule ExRabbitMQ.AST.Common do
                 with {:ok, state} <- xrmq_channel_setup(channel, state) do
                   xrmq_channel_open(channel, state)
                 end
+
               :closing ->
                 xrmq_set_channel_info(nil, nil)
 
                 {:error, :closing, state}
+
               error ->
                 Logger.error("could not open a new channel: #{inspect(error)}")
 
@@ -153,6 +154,7 @@ defmodule ExRabbitMQ.AST.Common do
 
                 {:error, error, state}
             end
+
           {:error, reason} ->
             {:error, reason, state}
         end

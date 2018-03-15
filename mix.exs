@@ -35,7 +35,8 @@ defmodule ExRabbitMQ.Mixfile do
       source_url: "https://github.com/StoiximanServices/exrabbitmq",
       homepage_url: "https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md",
       docs: [main: "ExRabbitMQ", logo: "logo.png"],
-      description: "A thin, boilerplate hiding wrapper for https://github.com/pma/amqp (RabbitMQ client library)",
+      description:
+        "A thin, boilerplate hiding wrapper for https://github.com/pma/amqp (RabbitMQ client library)",
       package: [
         maintainers: ["sadesyllas", "indyone"],
         licenses: ["MIT"],
