@@ -42,8 +42,11 @@ defmodule ExRabbitMQTest do
     consumer_monitor = Process.monitor(consumer)
 
     # the consumer tells us that the connection has been opened
-    assert_receive({:consumer_connection_open, consumer_connection_pid},
-      500, "failed to open a connection for the consumer")
+    assert_receive(
+      {:consumer_connection_open, consumer_connection_pid},
+      500,
+      "failed to open a connection for the consumer"
+    )
 
     # we monitor the consumer's connection GenServer wrapper so that we can wait for it to exit
     consumer_connection_monitor = Process.monitor(consumer_connection_pid)
@@ -52,18 +55,26 @@ defmodule ExRabbitMQTest do
     assert({:ok, _consumer_connection} = Connection.get(consumer_connection_pid))
 
     # are the consumer's channel and queue properly set up?
-    assert_receive({:consumer_state, %{consumer_channel_setup_ok: true, consumer_queue_setup_ok: {:ok, ^test_queue}}},
-      500, "failed to properly setup the consumer's channel and/or queue")
+    assert_receive(
+      {:consumer_state,
+       %{consumer_channel_setup_ok: true, consumer_queue_setup_ok: {:ok, ^test_queue}}},
+      500,
+      "failed to properly setup the consumer's channel and/or queue"
+    )
 
     # we start the producer to publish our test message
-    {:ok, producer} = ExRabbitMQProducerTest.start_link(self(), connection_config, test_queue, test_message)
+    {:ok, producer} =
+      ExRabbitMQProducerTest.start_link(self(), connection_config, test_queue, test_message)
 
     # we monitor the producer so that we can wait for it to exit
     producer_monitor = Process.monitor(producer)
 
     # the producer tells us that the connection has been opened
-    assert_receive({:producer_connection_open, producer_connection_pid},
-      500, "failed to open a connection for the producer")
+    assert_receive(
+      {:producer_connection_open, producer_connection_pid},
+      500,
+      "failed to open a connection for the producer"
+    )
 
     # we monitor the producer's connection GenServer wrapper so that we can wait for it to exit
     producer_connection_monitor = Process.monitor(producer_connection_pid)
@@ -72,8 +83,11 @@ defmodule ExRabbitMQTest do
     assert({:ok, _producer_connection} = Connection.get(consumer_connection_pid))
 
     # is the producers's channel properly set up?
-    assert_receive({:producer_state, %{producer_channel_setup_ok: true}},
-      500, "failed to properly setup the producer's channel")
+    assert_receive(
+      {:producer_state, %{producer_channel_setup_ok: true}},
+      500,
+      "failed to properly setup the producer's channel"
+    )
 
     # the producer must have reused the same connection as the consumer
     # when this connection is used for the maximum of 65535 channels,
@@ -84,7 +98,11 @@ defmodule ExRabbitMQTest do
     assert_receive({:publish, :ok}, 500, "failed to publish test message #{test_message}")
 
     # the consumer tells us that the message that we published is the same we have consumed
-    assert_receive({:consume, ^test_message}, 500, "failed to receive test message #{test_message}")
+    assert_receive(
+      {:consume, ^test_message},
+      500,
+      "failed to receive test message #{test_message}"
+    )
 
     # we stop everything
     ExRabbitMQConsumerTest.stop(consumer)
@@ -112,7 +130,8 @@ defmodule ExRabbitMQProducerTest do
       tester_pid: tester_pid,
       connection_config: connection_config,
       test_queue: test_queue,
-      test_message: test_message})
+      test_message: test_message
+    })
   end
 
   def init(state) do
@@ -125,11 +144,15 @@ defmodule ExRabbitMQProducerTest do
     GenServer.cast(producer_pid, :stop)
   end
 
-  def handle_cast(:init, %{
-    tester_pid: tester_pid,
-    connection_config: connection_config,
-    test_queue: test_queue,
-    test_message: test_message} = state) do
+  def handle_cast(
+        :init,
+        %{
+          tester_pid: tester_pid,
+          connection_config: connection_config,
+          test_queue: test_queue,
+          test_message: test_message
+        } = state
+      ) do
     new_state =
       xrmq_init(connection_config, state)
       |> xrmq_extract_state()
@@ -166,7 +189,11 @@ defmodule ExRabbitMQConsumerTest do
   use ExRabbitMQ.Consumer, GenServer
 
   def start_link(tester_pid, connection_config, queue_config) do
-    GenServer.start_link(__MODULE__, %{tester_pid: tester_pid, connection_config: connection_config, queue_config: queue_config})
+    GenServer.start_link(__MODULE__, %{
+      tester_pid: tester_pid,
+      connection_config: connection_config,
+      queue_config: queue_config
+    })
   end
 
   def init(state) do
@@ -179,7 +206,14 @@ defmodule ExRabbitMQConsumerTest do
     GenServer.cast(consumer_pid, :stop)
   end
 
-  def handle_cast(:init, %{tester_pid: tester_pid, connection_config: connection_config, queue_config: queue_config} = state) do
+  def handle_cast(
+        :init,
+        %{
+          tester_pid: tester_pid,
+          connection_config: connection_config,
+          queue_config: queue_config
+        } = state
+      ) do
     new_state =
       xrmq_init(connection_config, queue_config, state)
       |> xrmq_extract_state()

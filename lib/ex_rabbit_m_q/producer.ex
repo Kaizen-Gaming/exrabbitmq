@@ -59,8 +59,8 @@ defmodule ExRabbitMQ.Producer do
   For the configuration format see the top section of `ExRabbitMQ.Producer`.
   """
   @callback xrmq_init(connection_key :: atom, state :: term) ::
-    {:ok, new_state :: term} |
-    {:error, reason :: term, new_state :: term}
+              {:ok, new_state :: term}
+              | {:error, reason :: term, new_state :: term}
 
   @doc """
   Initiates a connection or reuses an existing one.
@@ -76,8 +76,8 @@ defmodule ExRabbitMQ.Producer do
   For the configuration format see the top section of `ExRabbitMQ.Producer`.
   """
   @callback xrmq_init(connection_config :: struct, state :: term) ::
-    {:ok, new_state :: term} |
-    {:error, reason :: term, new_state :: term}
+              {:ok, new_state :: term}
+              | {:error, reason :: term, new_state :: term}
 
   @doc """
   Returns a part of the `:exrabbitmq` configuration section, specified with the
@@ -102,8 +102,8 @@ defmodule ExRabbitMQ.Producer do
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
   @callback xrmq_channel_setup(channel :: term, state :: term) ::
-    {:ok, new_state :: term} |
-    {:error, reason :: term, new_state :: term}
+              {:ok, new_state :: term}
+              | {:error, reason :: term, new_state :: term}
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened,
@@ -112,23 +112,28 @@ defmodule ExRabbitMQ.Producer do
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
   @callback xrmq_channel_open(channel :: term, state :: term) ::
-    {:ok, new_state :: term} |
-    {:error, reason :: term, new_state :: term}
+              {:ok, new_state :: term}
+              | {:error, reason :: term, new_state :: term}
 
   @doc """
   This overridable function publishes the `payload` to the `exchange` using the provided `routing_key`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_publish(payload :: term, exchange :: String.t, routing_key :: String.t, opts :: [term]) ::
-    :ok |
-    {:error, reason :: :blocked | :closing | :no_channel}
+  @callback xrmq_basic_publish(
+              payload :: term,
+              exchange :: String.t(),
+              routing_key :: String.t(),
+              opts :: [term]
+            ) ::
+              :ok
+              | {:error, reason :: :blocked | :closing | :no_channel}
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.
   """
-  @callback xrmq_extract_state({:ok, state :: term}|{:error, reason :: term, state :: term}) ::
-  state :: term
+  @callback xrmq_extract_state({:ok, state :: term} | {:error, reason :: term, state :: term}) ::
+              state :: term
 
   require ExRabbitMQ.AST.Common
   require ExRabbitMQ.AST.Producer.GenServer
@@ -148,7 +153,7 @@ defmodule ExRabbitMQ.Producer do
       unquote(inner_ast)
 
       def xrmq_init(connection_key, state)
-      when is_atom(connection_key) do
+          when is_atom(connection_key) do
         xrmq_init(xrmq_get_connection_config(connection_key), state)
       end
 
@@ -170,6 +175,7 @@ defmodule ExRabbitMQ.Producer do
               {:ok, pid} = ExRabbitMQ.Connection.Supervisor.start_child(connection_config)
               Connection.subscribe(pid, connection_config)
               pid
+
             pid ->
               pid
           end
