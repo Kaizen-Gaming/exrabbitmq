@@ -5,7 +5,7 @@ defmodule ExRabbitMQ.Producer do
   It also provides hooks to allow the programmer to publish a message without having to directly
   access the AMPQ interfaces.
 
-  For a connection configuration example see `ExRabbitMQ.ConnectionConfig`.
+  For a connection configuration example see `ExRabbitMQ.Connection.Config`.
 
   #### Example usage for a producer implementing a `GenServer`
 

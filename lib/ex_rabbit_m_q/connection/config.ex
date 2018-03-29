@@ -30,7 +30,8 @@ defmodule ExRabbitMQ.Connection.Config do
     # the connection's heartbeat RabbitMQ in milliseconds (optional, default: 1000)
     heartbeat: 1000,
 
-    # the delay after which a connection wil be re-attempted after having been dropped (optional, default: 2000)
+    # the delay after which a connection wil be re-attempted after having been 
+    # dropped (optional, default: 2000)
     reconnect_after: 2000,
   ```
   """
