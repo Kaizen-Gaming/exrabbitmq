@@ -17,7 +17,7 @@ defmodule ExRabbitMQ.Connection do
   """
   @module __MODULE__
 
-  use GenServer
+  use GenServer, restart: :transient
 
   require Logger
 

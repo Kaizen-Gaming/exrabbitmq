@@ -3,40 +3,30 @@ defmodule ExRabbitMQ.Connection.Supervisor do
   A supervisor using the `:simple_one_for_one` strategy to serve as a template
   for spawning new RabbitMQ connection (module `ExRabbitMQ.Connection`) processes.
   """
+
   @module __MODULE__
 
-  use Supervisor, start: {@module, :start_link, []}
+  use DynamicSupervisor
 
   @doc """
   Starts a new Supervisor for managing the RabbitMQ connections.
   """
-  def start_link() do
-    Supervisor.start_link(@module, :ok, name: @module)
-  end
-
-  def init(:ok) do
-    children = [
-      Supervisor.child_spec(
-        ExRabbitMQ.Connection,
-        start: {ExRabbitMQ.Connection, :start_link, []},
-        restart: :transient)
-    ]
-    options = [strategy: :simple_one_for_one]
-    Supervisor.init(children, options)
+  def start_link(args) do
+    DynamicSupervisor.start_link(@module, args, name: @module)
   end
 
   @doc """
   Starts a new RabbitMQ connection process with the specified configuration, 
   and supervises it.
   """
-  def start_child(connection_config \\ nil) do
-    args =
-      if connection_config === nil do
-        []
-      else
-        [connection_config]
-      end
+  def start_child(connection_config) do
+    child_spec = {ExRabbitMQ.Connection, connection_config}
 
-    Supervisor.start_child(@module, args)
+    DynamicSupervisor.start_child(@module, child_spec)
+  end
+
+  @doc false
+  def init(_args) do
+    DynamicSupervisor.init(strategy: :one_for_one)
   end
 end
