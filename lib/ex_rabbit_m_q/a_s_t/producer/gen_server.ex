@@ -40,7 +40,9 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
 
             {:noreply, new_state}
           _ ->
-            handle_info({{:DOWN, ref, :process, pid, reason}}, state)
+            send(self(), {{:DOWN, ref, :process, pid, reason}})
+
+            {:noreply, state}
         end
       end
     end

@@ -32,11 +32,11 @@ defmodule ExRabbitMQ.ChannelRipper do
     AMQP.Channel.close(channel)
 
     {:stop, :normal, state}
+  rescue
+    _ -> {:stop, :normal, state}
   catch
     _ -> {:stop, :normal, state}
     _, _ -> {:stop, :normal, state}
-  rescue
-    _ -> {:stop, :normal, state}
   end
 
   def handle_info(_, state) do

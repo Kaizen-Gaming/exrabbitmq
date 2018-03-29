@@ -532,11 +532,7 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       defp xrmq_set_queue_config(config) do
-        if config === nil do
-          Process.delete(Constants.queue_config_key())
-        else
-          Process.put(Constants.queue_config_key(), config)
-        end
+        Process.put(Constants.queue_config_key(), config)
       end
 
       unquote(common_ast)

@@ -49,8 +49,11 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
               |> xrmq_extract_state()
 
             {:noreply, new_state}
+
           _ ->
-            handle_info({{:DOWN, ref, :process, pid, reason}}, state)
+            send(self(), {{:DOWN, ref, :process, pid, reason}})
+
+            {:noreply, state}
         end
       end
     end

@@ -15,6 +15,9 @@ defmodule ExRabbitMQ.AST.Common do
   def ast() do
     # credo:disable-for-previous-line
     quote location: :keep do
+
+      alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
+
       def xrmq_channel_setup(_channel, state) do
         {:ok, state}
       end
@@ -83,11 +86,7 @@ defmodule ExRabbitMQ.AST.Common do
       end
 
       defp xrmq_set_connection_config(config) do
-        if config === nil do
-          Process.delete(Constants.connection_config_key())
-        else
-          Process.put(Constants.connection_config_key(), config)
-        end
+        Process.put(Constants.connection_config_key(), config)
       end
 
       defp xrmq_get_connection_pid() do
@@ -95,11 +94,7 @@ defmodule ExRabbitMQ.AST.Common do
       end
 
       defp xrmq_set_connection_pid(connection_pid) do
-        if connection_pid === nil do
-          Process.delete(Constants.connection_pid_key())
-        else
-          Process.put(Constants.connection_pid_key(), connection_pid)
-        end
+        Process.put(Constants.connection_pid_key(), connection_pid)
       end
 
       defp xrmq_set_channel_ripper_pid(channel_ripper_pid) do
@@ -115,13 +110,8 @@ defmodule ExRabbitMQ.AST.Common do
       end
 
       defp xrmq_set_channel_info(channel, channel_monitor) do
-        if channel === nil or channel_monitor === nil do
-          Process.delete(Constants.channel_key())
-          Process.delete(Constants.channel_monitor_key())
-        else
-          Process.put(Constants.channel_key(), channel)
-          Process.put(Constants.channel_monitor_key(), channel_monitor)
-        end
+        Process.put(Constants.channel_key(), channel)
+        Process.put(Constants.channel_monitor_key(), channel_monitor)
       end
 
       defp xrmq_open_channel(state) do

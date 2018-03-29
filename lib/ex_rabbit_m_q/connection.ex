@@ -53,7 +53,7 @@ defmodule ExRabbitMQ.Connection do
 
   `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`)
   """
-  @spec get(pid) :: true | false | {:error, any}
+  @spec get(pid) :: {:ok, %AMQP.Connection{}} | {:error, any}
   def get(connection_pid) do
     case connection_pid do
       nil ->
