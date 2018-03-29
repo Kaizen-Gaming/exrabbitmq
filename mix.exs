@@ -4,13 +4,13 @@ defmodule ExRabbitMQ.Mixfile do
   def project do
     [
       app: :exrabbitmq,
-      version: "2.11.2",
-      elixir: "~> 1.5",
+      version: "3.0.0",
+      elixir: "~> 1.6",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
-    |> merge_package_info()
+    |> Keyword.merge(package())
   end
 
   def application do
@@ -28,19 +28,19 @@ defmodule ExRabbitMQ.Mixfile do
     ]
   end
 
-  defp merge_package_info(project_spec) do
-    project_spec
-    |> Keyword.merge(
+  defp package do
+    [
       name: "ExRabbitMQ",
       source_url: "https://github.com/StoiximanServices/exrabbitmq",
       homepage_url: "https://github.com/StoiximanServices/exrabbitmq/blob/master/README.md",
       docs: [main: "ExRabbitMQ", logo: "logo.png"],
-      description: "A thin, boilerplate hiding wrapper for https://github.com/pma/amqp (RabbitMQ client library)",
+      description:
+        "A thin, boilerplate hiding wrapper for https://github.com/pma/amqp (RabbitMQ client library)",
       package: [
         maintainers: ["sadesyllas", "indyone"],
         licenses: ["MIT"],
         links: %{"Github" => "https://github.com/StoiximanServices/exrabbitmq"}
       ]
-    )
+    ]
   end
 end
