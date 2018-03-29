@@ -60,5 +60,42 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
   ```
   """
 
+  @name __MODULE__
+
+  @type t :: %__MODULE__{}
+
   defstruct [:queue, :queue_opts, :exchange, :exchange_opts, :bind_opts, :qos_opts, :consume_opts]
+
+  @spec from_env(key :: atom | module) :: t()
+  def from_env(key) do
+    from_env(:ex_rabbitmq, key)
+  end
+
+  @spec from_env(app :: atom, key :: atom | module) :: t()
+  def from_env(app, key) do
+    config = Application.get_env(app, key, [])
+
+    %@name{
+      queue: config[:queue],
+      queue_opts: config[:queue_opts],
+      consume_opts: config[:consume_opts],
+      exchange: config[:exchange],
+      exchange_opts: config[:exchange_opts],
+      bind_opts: config[:bind_opts],
+      qos_opts: config[:qos_opts]
+    }
+  end
+
+  @spec from_env(config :: t()) :: t()
+  def merge_defaults(%@name{} = config) do
+    %@name{
+      queue: config.queue || "",
+      queue_opts: config.queue_opts || [],
+      consume_opts: config.consume_opts || [],
+      exchange: config.exchange || nil,
+      exchange_opts: config.exchange_opts || [],
+      bind_opts: config.bind_opts || [],
+      qos_opts: config.qos_opts || []
+    }
+  end
 end

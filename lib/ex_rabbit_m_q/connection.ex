@@ -15,37 +15,33 @@ defmodule ExRabbitMQ.Connection do
 
   [`:ets`](http://erlang.org/doc/man/ets.html) is used to hold the subscriptions of consumers and producers that are using the table holding connection `GenServer` instance.
   """
-  @module __MODULE__
+
+  @name __MODULE__
+
+  alias ExRabbitMQ.Connection.{Config, PubSub, Group, Supervisor}
 
   use GenServer, restart: :transient
 
   require Logger
 
-  alias ExRabbitMQ.Connection
-  alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
-  alias ExRabbitMQ.Constants
-
-  defstruct [:connection, :connection_pid, :ets_consumers, config: %ConnectionConfig{}, stale?: false]
+  defstruct [:connection, :connection_pid, :ets_consumers, config: %Config{}, stale?: false]
 
   @doc false
-  def start_link(%ConnectionConfig{} = config) do
-    GenServer.start_link(@module, config)
+  def start_link(%Config{} = config) do
+    GenServer.start_link(@name, config)
   end
 
   @doc false
   def init(config) do
     Process.flag(:trap_exit, true)
 
-    :ok = :pg2.create(Constants.connection_pids_group_name)
-    :ok = :pg2.join(Constants.connection_pids_group_name, self())
-
-    ets_consumers = Constants.connection_pids_group_name |> String.to_atom() |> :ets.new([:private])
+    :ok = Group.join()
+    ets_consumers = PubSub.new()
 
     Process.send(self(), :connect, [])
-
     schedule_cleanup()
 
-    {:ok, %Connection{config: config, ets_consumers: ets_consumers}}
+    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
   end
 
   @doc """
@@ -58,6 +54,7 @@ defmodule ExRabbitMQ.Connection do
     case connection_pid do
       nil ->
         {:error, :nil_connection_pid}
+
       connection_pid ->
         try do
           GenServer.call(connection_pid, :get)
@@ -65,6 +62,21 @@ defmodule ExRabbitMQ.Connection do
           :exit, reason ->
             {:error, reason}
         end
+    end
+  end
+
+  @spec subscribe(%Config{}) :: pid
+  def subscribe(connection_config) do
+    Group.get_members()
+    |> Enum.find(&subscribe(&1, connection_config))
+    |> case do
+      nil ->
+        {:ok, pid} = Supervisor.start_child(connection_config)
+        subscribe(pid, connection_config)
+        pid
+
+      pid ->
+        pid
     end
   end
 
@@ -93,23 +105,22 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc false
-  def handle_call(:get, _from, %Connection{connection: connection} = state) do
+  def handle_call(:get, _from, state) do
+    %{connection: connection} = state
     reply = if connection === nil, do: {:error, :nil_connection_pid}, else: {:ok, connection}
+
     {:reply, reply, state}
   end
 
   @doc false
-  def handle_call({:subscribe, consumer_pid, connection_config}, _from,
-    %Connection{config: config, ets_consumers: ets_consumers} = state) do
+  def handle_call({:subscribe, consumer_pid, connection_config}, _from, state) do
+    %{config: config, ets_consumers: ets_consumers} = state
+
     result =
       if config === connection_config do
-        case :ets.info(ets_consumers)[:size] do
-          65_535 ->
-            false
-          _ ->
-            :ets.insert_new(ets_consumers, {consumer_pid})
-            Process.monitor(consumer_pid)
-            true
+        with true <- PubSub.subscribe(ets_consumers, consumer_pid) do
+          Process.monitor(consumer_pid)
+          true
         end
       else
         false
@@ -121,18 +132,16 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc false
-  def handle_cast(:close, %Connection{
-    ets_consumers: ets_consumers,
-    connection: connection,
-    connection_pid: connection_pid} = state) do
+  def handle_cast(:close, state) do
+    %{ets_consumers: ets_consumers, connection: connection, connection_pid: connection_pid} =
+      state
+
     if connection === nil do
       {:stop, :normal, state}
     else
       Process.unlink(connection_pid)
-
       AMQP.Connection.close(connection)
-
-      publish(ets_consumers, {:xrmq_connection, {:closed, nil}})
+      PubSub.publish(ets_consumers, {:xrmq_connection, {:closed, nil}})
 
       new_state = %{state | connection: nil, connection_pid: nil}
 
@@ -141,66 +150,72 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc false
-  def handle_info(:connect, %Connection{config: config, ets_consumers: ets_consumers} = state) do
-    Logger.debug("connecting to RabbitMQ")
+  def handle_info(:connect, state) do
+    Logger.debug("Connecting to RabbitMQ")
 
-    case AMQP.Connection.open(
+    %{config: config, ets_consumers: ets_consumers} = state
+
+    opts = [
       username: config.username,
       password: config.password,
       host: config.host,
       port: config.port,
       virtual_host: config.vhost,
-      heartbeat: config.heartbeat) do
-        {:ok, %AMQP.Connection{pid: connection_pid} = connection} ->
-          Logger.debug("connected to RabbitMQ")
+      heartbeat: config.heartbeat
+    ]
 
-          Process.link(connection_pid)
+    case AMQP.Connection.open(opts) do
+      {:ok, %AMQP.Connection{pid: connection_pid} = connection} ->
+        Logger.debug("Connected to RabbitMQ")
 
-          publish(ets_consumers, {:xrmq_connection, {:open, connection}})
+        Process.link(connection_pid)
+        PubSub.publish(ets_consumers, {:xrmq_connection, {:open, connection}})
+        new_state = %{state | connection: connection, connection_pid: connection_pid}
 
-          new_state = %{state | connection: connection, connection_pid: connection_pid}
+        {:noreply, new_state}
 
-          {:noreply, new_state}
-        {:error, reason} ->
-          Logger.error("failed to connect to RabbitMQ: #{inspect(reason)}")
+      {:error, reason} ->
+        Logger.error("Failed to connect to RabbitMQ: #{inspect(reason)}")
 
-          Process.send_after(self(), :connect, config.reconnect_after)
+        Process.send_after(self(), :connect, config.reconnect_after)
+        new_state = %{state | connection: nil, connection_pid: nil}
 
-          new_state = %{state | connection: nil, connection_pid: nil}
-
-          {:noreply, new_state}
-      end
+        {:noreply, new_state}
+    end
   end
 
   @doc false
-  def handle_info({:EXIT, pid, _reason},
-    %Connection{config: config, connection_pid: connection_pid, ets_consumers: ets_consumers} = state)
-  when pid === connection_pid do
-    publish(ets_consumers, {:xrmq_connection, {:closed, nil}})
+  def handle_info({:EXIT, pid, _reason}, %{connection_pid: connection_pid} = state)
+      when pid === connection_pid do
+    Logger.error("Disconnected from RabbitMQ")
 
-    Logger.error("disconnected from RabbitMQ")
+    %{config: config, ets_consumers: ets_consumers} = state
 
+    PubSub.publish(ets_consumers, {:xrmq_connection, {:closed, nil}})
     Process.send_after(self(), :connect, config.reconnect_after)
-
     new_state = %{state | connection: nil, connection_pid: nil}
 
     {:noreply, new_state}
   end
 
   @doc false
-  def handle_info({:DOWN, _ref, :process, consumer_pid, _reason}, %Connection{ets_consumers: ets_consumers} = state) do
-    :ets.delete(ets_consumers, consumer_pid)
+  def handle_info({:DOWN, _ref, :process, consumer_pid, _reason}, state) do
+    %{ets_consumers: ets_consumers} = state
+
+    PubSub.unsubscribe(ets_consumers, consumer_pid)
 
     {:noreply, state}
   end
 
   @doc false
-  def handle_info(:cleanup, %{ets_consumers: ets_consumers, stale?: stale?} = state) do
+  def handle_info(:cleanup, state) do
+    %{ets_consumers: ets_consumers, stale?: stale?} = state
+
     if stale? do
       {:stop, :normal, state}
     else
       new_state =
-        case :ets.info(ets_consumers)[:size] do
+        case PubSub.size(ets_consumers) do
           0 -> %{state | stale?: true}
           _ -> state
         end
@@ -214,18 +229,6 @@ defmodule ExRabbitMQ.Connection do
   @doc false
   def handle_info(_, state) do
     {:noreply, state}
-  end
-
-  defp publish(ets_consumers, what) do
-    ets_consumers
-    |> :ets.select([{:"_", [], [:"$_"]}])
-    |> Enum.split_with(fn {consumer_pid} ->
-      if Process.alive?(consumer_pid) do
-        send(consumer_pid, what)
-      else
-        :ets.delete(ets_consumers, consumer_pid)
-      end
-    end)
   end
 
   defp schedule_cleanup() do

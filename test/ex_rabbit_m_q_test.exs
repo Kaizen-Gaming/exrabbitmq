@@ -8,7 +8,7 @@ defmodule ExRabbitMQTest do
   test "publishing a message and then consuming it" do
     # first we start the connection supervisor
     # it holds the template for the GenServer wrapping connections to RabbitMQ
-    ExRabbitMQ.Connection.Supervisor.start_link()
+    ExRabbitMQ.Connection.Supervisor.start_link([])
 
     # configuration for a default local RabbitMQ installation
     connection_config = %ConnectionConfig{

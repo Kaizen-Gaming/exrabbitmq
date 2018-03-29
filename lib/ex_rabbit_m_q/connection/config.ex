@@ -36,5 +36,54 @@ defmodule ExRabbitMQ.Connection.Config do
   ```
   """
 
+  @name __MODULE__
+
+  @type t :: %__MODULE__{}
+
   defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]
+
+  @doc """
+  Returns a part of the `:exrabbitmq` configuration section, specified with the
+  `key` argument.
+
+  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
+  """
+  @spec from_env(key :: atom | module) :: t()
+  def from_env(key) do
+    from_env(:ex_rabbitmq, key)
+  end
+
+  @doc """
+  Returns a part of the `app` configuration section, specified with the
+  `key` argument.
+
+  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
+  """
+  @spec from_env(app :: atom, key :: atom | module) :: t()
+  def from_env(app, key) do
+    config = Application.get_env(app, key, [])
+
+    %@name{
+      username: config[:username],
+      password: config[:password],
+      host: config[:host],
+      port: config[:port],
+      vhost: config[:vhost],
+      heartbeat: config[:heartbeat],
+      reconnect_after: config[:reconnect_after]
+    }
+  end
+
+  @spec merge_defaults(config :: t()) :: t()
+  def merge_defaults(%@name{} = config) do
+    %@name{
+      username: config.username,
+      password: config.password,
+      host: config.host,
+      port: config.port || 5672,
+      vhost: config.vhost || "/",
+      heartbeat: config.heartbeat || 1000,
+      reconnect_after: config.reconnect_after || 2000
+    }
+  end
 end

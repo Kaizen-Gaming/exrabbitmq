@@ -4,11 +4,6 @@ defmodule ExRabbitMQ.Constants do
   """
 
   @doc """
-  The [`:pg2`](http://erlang.org/doc/man/pg2.html) group name for the connections to RabbitMQ
-  """
-  def connection_pids_group_name(), do: "ExRabbitMQConnections"
-
-  @doc """
   The key in the process dictionary holding the connection pid (GenServer) used by a consumer or a producer.
   """
   def connection_pid_key(), do: :xrmq_connection_pid
