@@ -251,7 +251,7 @@ defmodule ExRabbitMQ.Connection do
     {:noreply, state}
   end
 
-  defp schedule_cleanup() do
+  defp schedule_cleanup do
     Process.send_after(self(), :cleanup, 5000)
   end
 end

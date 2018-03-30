@@ -11,7 +11,7 @@ defmodule ExRabbitMQ.ChannelRipper do
   Starts a new `#{@module}` process which will immediately starts monitoring the calling process.
   """
   @spec start() :: GenServer.on_start
-  def start() do
+  def start do
     GenServer.start(@module, %{monitored_pid: self(), channel: nil})
   end
 

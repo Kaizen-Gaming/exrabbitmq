@@ -11,7 +11,7 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
 
   It responds to connection and channel events, trying to keep a channel open when a connection is available.
   """
-  def ast() do
+  def ast do
     quote location: :keep do
       alias ExRabbitMQ.State
 
@@ -31,7 +31,7 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
       end
 
       def handle_info({:DOWN, ref, :process, pid, reason}, state) do
-        case State.get_channel_info() do
+        case State.get_channel_info do
           {_, ^ref} ->
             State.set_channel_info(nil, nil)
 

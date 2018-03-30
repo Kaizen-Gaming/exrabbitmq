@@ -20,7 +20,7 @@ defmodule ExRabbitMQ.Connection.Group do
   Returns all connection processes running on the local node in the group.
   """
   @spec get_members() :: [pid]
-  def get_members() do
+  def get_members do
     name = @name
 
     case :pg2.get_local_members(name) do

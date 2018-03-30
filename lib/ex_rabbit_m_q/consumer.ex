@@ -20,7 +20,7 @@ defmodule ExRabbitMQ.Consumer do
     use GenServer
     use ExRabbitMQ.Consumer, GenServer
 
-    def start_link() do
+    def start_link do
       GenServer.start_link(@module, :ok)
     end
 
@@ -476,7 +476,7 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       @deprecated "Use ExRabbitMQ.State.get_queue_config/0 instead"
-      def xrmq_get_queue_config() do
+      def xrmq_get_queue_config do
         State.get_queue_config()
       end
 

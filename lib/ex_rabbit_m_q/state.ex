@@ -9,7 +9,7 @@ defmodule ExRabbitMQ.State do
   alias ExRabbitMQ.Constants
 
   @spec get_connection_config() :: ConnectionConfig.t() | nil
-  def get_connection_config() do
+  def get_connection_config do
     Process.get(Constants.connection_config_key())
   end
 
@@ -19,7 +19,7 @@ defmodule ExRabbitMQ.State do
   end
 
   @spec get_connection_pid() :: pid | nil
-  def get_connection_pid() do
+  def get_connection_pid do
     Process.get(Constants.connection_pid_key())
   end
 
@@ -29,7 +29,7 @@ defmodule ExRabbitMQ.State do
   end
 
   @spec get_channel_ripper_pid() :: pid | nil
-  def get_channel_ripper_pid() do
+  def get_channel_ripper_pid do
     Process.get(Constants.channel_ripper_pid_key())
   end
 
@@ -39,7 +39,7 @@ defmodule ExRabbitMQ.State do
   end
 
   @spec get_channel_info() :: {%AMQP.Channel{} | nil, pid | nil}
-  def get_channel_info() do
+  def get_channel_info do
     {Process.get(Constants.channel_key()), Process.get(Constants.channel_monitor_key())}
   end
 
@@ -50,7 +50,7 @@ defmodule ExRabbitMQ.State do
   end
 
   @spec get_queue_config() :: QueueConfig.t() | nil
-  def get_queue_config() do
+  def get_queue_config do
     Process.get(Constants.queue_config_key())
   end
 

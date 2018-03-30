@@ -12,7 +12,7 @@ defmodule ExRabbitMQ.AST.Common do
 
   It also holds the AST necessary to open a channel when an AMQP connection is ready.
   """
-  def ast() do
+  def ast do
     # credo:disable-for-previous-line
     quote location: :keep do
       alias ExRabbitMQ.{ChannelRipper, Connection, Constants, State}
@@ -46,7 +46,7 @@ defmodule ExRabbitMQ.AST.Common do
       def xrmq_extract_state({:error, _, state}), do: state
 
       @deprecated "Use ExRabbitMQ.State.get_connection_config/0 instead"
-      def xrmq_get_connection_config() do
+      def xrmq_get_connection_config do
         State.get_connection_config()
       end
 

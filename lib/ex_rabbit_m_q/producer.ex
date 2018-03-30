@@ -16,7 +16,7 @@ defmodule ExRabbitMQ.Producer do
     use GenServer
     use ExRabbitMQ.Producer
 
-    def start_link() do
+    def start_link do
       GenServer.start_link(@module, :ok)
     end
 
