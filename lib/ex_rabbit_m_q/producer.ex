@@ -59,7 +59,7 @@ defmodule ExRabbitMQ.Producer do
   The function accepts the following arguments:
   * `connection` - The configuration information for the RabbitMQ connection.
     It can either be a `ExRabbitMQ.Connection.Config` struct or an atom that will be used as the `key` for reading the
-    the `:ex_rabbitmq` configuration part from the enviroment.
+    the `:exrabbitmq` configuration part from the enviroment.
     For more information on how to configure the connection, check `ExRabbitMQ.Connection.Config`.
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """

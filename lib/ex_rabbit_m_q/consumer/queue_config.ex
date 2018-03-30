@@ -73,10 +73,10 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
   @doc """
   Returns a part of the `app` configuration section, specified with the
   `key` argument as a `ExRabbitMQ.Consumer.QueueConfig` struct.
-  If the `app` argument is omitted, it defaults to `:ex_rabbitmq`.
+  If the `app` argument is omitted, it defaults to `:exrabbitmq`.
   """
   @spec from_env(app :: atom, key :: atom | module) :: t()
-  def from_env(app \\ :ex_rabbitmq, key) do
+  def from_env(app \\ :exrabbitmq, key) do
     config = Application.get_env(app, key, [])
 
     %@name{

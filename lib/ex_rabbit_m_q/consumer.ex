@@ -84,11 +84,11 @@ defmodule ExRabbitMQ.Consumer do
   The function accepts the following arguments:
   * `connection` - The configuration information for the RabbitMQ connection.
     It can either be a `ExRabbitMQ.Connection.Config` struct or an atom that will be used as the `key` for reading the
-    the `:ex_rabbitmq` configuration part from the enviroment.
+    the `:exrabbitmq` configuration part from the enviroment.
     For more information on how to configure the connection, check `ExRabbitMQ.Connection.Config`.
   * `queue` - The configuration information for the RabbitMQ queue to consume.
     It can either be a `ExRabbitMQ.Consumer.QueueConfig` struct or an atom that will be used as the `key` for reading the
-    the `:ex_rabbitmq` configuration part from the enviroment.
+    the `:exrabbitmq` configuration part from the enviroment.
     For more information on how to configure the consuming queue, check `ExRabbitMQ.Connection.Config`.
   * `start_consuming` - When `true` then `c:xrmq_consume/1` is called automatically after the connection and channel has
     been established successfully. *Optional: Defaults to `true`.*
