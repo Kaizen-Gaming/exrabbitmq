@@ -2,18 +2,20 @@ defmodule ExRabbitMQ.Connection do
   @moduledoc """
   A `GenServer` implementing a long running connection to a RabbitMQ server.
 
-  Consumers and producers share connections and when a connection reaches the limit of
-  `65535` channels, a new connection is established.
+  Consumers and producers share connections and when a connection reaches the limit of **65535** channels, a new
+  connection is established.
 
-  To correctly monitor the open channels, users must not open channels manually (e.g., in the provided hooks).
+  Warning: To correctly monitor the open channels, users must not open channels manually (e.g., in the provided hooks).
 
-  Internally, a connection `GenServer` uses [`:pg2`](http://erlang.org/doc/man/pg2.html) and [`:ets`](http://erlang.org/doc/man/ets.html) to handle local subscriptions of consumers and producers.
+  Internally, a connection `GenServer` uses [`:pg2`](http://erlang.org/doc/man/pg2.html) and
+  [`:ets`](http://erlang.org/doc/man/ets.html) to handle local subscriptions of consumers and producers.
 
   [`:pg2`](http://erlang.org/doc/man/pg2.html) is used to name the pool of connections to RabbitMQ.
 
   Only local members are considered so clustering cannot cause problems with local subscriptions.
 
-  [`:ets`](http://erlang.org/doc/man/ets.html) is used to hold the subscriptions of consumers and producers that are using the table holding connection `GenServer` instance.
+  [`:ets`](http://erlang.org/doc/man/ets.html) is used to hold the subscriptions of consumers and producers that are
+  using the table holding connection `GenServer` instance.
   """
 
   @name __MODULE__
@@ -26,47 +28,68 @@ defmodule ExRabbitMQ.Connection do
 
   defstruct [:connection, :connection_pid, :ets_consumers, config: %Config{}, stale?: false]
 
-  @doc false
+  @doc """
+  Starts a new `#{@name}` process and links it with the calling one.
+  """
   def start_link(%Config{} = config) do
     GenServer.start_link(@name, config)
-  end
-
-  @doc false
-  def init(config) do
-    Process.flag(:trap_exit, true)
-
-    :ok = Group.join()
-    ets_consumers = PubSub.new()
-
-    Process.send(self(), :connect, [])
-    schedule_cleanup()
-
-    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
   end
 
   @doc """
   Checks whether this process holds a usable connection to RabbitMQ.
 
-  `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`)
+  The `connection_pid` is the `GenServer` pid implementing the called `#{@name}`.
   """
-  @spec get(pid) :: {:ok, %AMQP.Connection{}} | {:error, any}
-  def get(connection_pid) do
-    case connection_pid do
-      nil ->
-        {:error, :nil_connection_pid}
-
-      connection_pid ->
-        try do
-          GenServer.call(connection_pid, :get)
-        catch
-          :exit, reason ->
-            {:error, reason}
-        end
-    end
+  @spec get(connection_pid :: pid) :: {:ok, %AMQP.Connection{} | nil} | {:error, any}
+  def get(nil) do
+    {:error, :nil_connection_pid}
   end
 
-  @spec subscribe(%Config{}) :: pid
-  def subscribe(connection_config) do
+  def get(connection_pid) do
+    GenServer.call(connection_pid, :get)
+  catch
+    :exit, reason -> {:error, reason}
+  end
+
+  @doc """
+  Tries to subscribe the calling process, via `self/0` to the `ExRabbitMQ.Connection.PubSub` of the `connection_pid`
+  process.
+
+  If the `connection_config` configuration does not match the one of the `connection_pid`'s' process, then the
+  subscription is not allowed.
+
+  If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains 65535 subscribed processes,
+  and thus the maximum allowed 65535 channels, then the subscription is not allowed so that a new connection
+  process can be created.
+
+  The argument `connection_pid` is the GenServer pid implementing the called `#{@name}`.
+
+  The argument `connection_config` is the `ExRabbitMQ.Connection.Config` that the `#{@name}` has to be using in order
+  to allow the subscription.
+  """
+  @spec subscribe(connection_pid :: pid, Config.t()) :: boolean
+  def subscribe(connection_pid, connection_config) do
+    GenServer.call(connection_pid, {:subscribe, self(), connection_config})
+  end
+
+  @doc """
+  Finds a `#{@name}` process in the `ExRabbitMQ.Connection.Group` that has the exact same `connection_config`
+  configuration.
+
+  If found, it subscribes the calling process via `self/0` to its `ExRabbitMQ.Connection.PubSub` for events regarding
+  the connection status and then returns its process ID.
+
+  If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains 65535 subscribed processes, and thus
+  the maximum allowed 65535 channels, then the subscription is not allowed so that a new connection process can be
+  created. In this case, a new`#{@name}` will be started and returned.
+
+  If not found then a new `#{@name}` will be started and returned.
+
+  The `connection_config` is the `ExRabbitMQ.Connection.Config` that the `#{@name}` has to be using in order to allow
+  the subscription.
+  """
+  @spec get_subscribe(connection_config :: %Config{}) :: pid
+  def get_subscribe(connection_config) do
     Group.get_members()
     |> Enum.find(&subscribe(&1, connection_config))
     |> case do
@@ -81,27 +104,24 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc """
-  Subscribes a consumer process, via `self()`, to the managed ETS table.
-
-  If the ETS table already contains 65535 consumers, and thus the maximum allowed 65535 channels,
-  then the subscription is not allowed so that a new connection can be created.
-
-  `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`
-
-  `connection_config` is the connection config that the `ExRabbitMQ.Connection` has to be using
-  in order to allow the subscription
-  """
-  @spec subscribe(pid, term) :: true | false
-  def subscribe(connection_pid, connection_config) do
-    GenServer.call(connection_pid, {:subscribe, self(), connection_config})
-  end
-
-  @doc """
   Gracefully closes the RabbitMQ connection and terminates its GenServer handler identified by `connection_pid`.
   """
   @spec close(pid) :: :ok
   def close(connection_pid) do
     GenServer.cast(connection_pid, :close)
+  end
+
+  @doc false
+  def init(config) do
+    Process.flag(:trap_exit, true)
+
+    :ok = Group.join()
+    ets_consumers = PubSub.new()
+
+    Process.send(self(), :connect, [])
+    schedule_cleanup()
+
+    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
   end
 
   @doc false
