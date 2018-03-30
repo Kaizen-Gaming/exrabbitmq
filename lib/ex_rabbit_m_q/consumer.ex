@@ -320,11 +320,9 @@ defmodule ExRabbitMQ.Consumer do
 
       @behaviour ExRabbitMQ.Consumer
 
-      alias ExRabbitMQ.Constants
-      alias ExRabbitMQ.Connection
+      alias ExRabbitMQ.{Constants, State}
       alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
       alias ExRabbitMQ.Consumer.QueueConfig
-      alias ExRabbitMQ.ChannelRipper
 
       unquote(inner_ast)
 
@@ -357,7 +355,7 @@ defmodule ExRabbitMQ.Consumer do
         queue_config = QueueConfig.merge_defaults(queue_config)
 
         with :ok <- xrmq_connection_setup(connection_config) do
-          xrmq_set_queue_config(queue_config)
+          State.set_queue_config(queue_config)
           xrmq_open_channel_consume(state, start_consuming)
         end
       end
@@ -377,8 +375,8 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       def xrmq_consume(state) do
-        {channel, _} = xrmq_get_channel_info()
-        config = xrmq_get_queue_config()
+        {channel, _} = State.get_channel_info()
+        config = State.get_queue_config()
 
         if channel === nil or config === nil do
           nil
@@ -396,7 +394,7 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       def xrmq_queue_setup(channel, queue, state) do
-        config = xrmq_get_queue_config()
+        config = State.get_queue_config()
 
         with :ok <- xrmq_qos_setup(channel, config),
              :ok <- xrmq_exchange_declare(channel, config),
@@ -438,7 +436,7 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       def xrmq_basic_ack(delivery_tag, state) do
-        case xrmq_get_channel_info() do
+        case State.get_channel_info() do
           {nil, _} ->
             {:error, Constants.no_channel_error(), state}
 
@@ -460,7 +458,7 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       def xrmq_basic_reject(delivery_tag, opts, state) do
-        case xrmq_get_channel_info() do
+        case State.get_channel_info() do
           {nil, _} ->
             {:error, Constants.no_channel_error(), state}
 
@@ -477,12 +475,9 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
+      @deprecated "Use ExRabbitMQ.State.get_queue_config/0 instead"
       def xrmq_get_queue_config() do
-        Process.get(Constants.queue_config_key())
-      end
-
-      defp xrmq_set_queue_config(config) do
-        Process.put(Constants.queue_config_key(), config)
+        State.get_queue_config()
       end
 
       unquote(common_ast)

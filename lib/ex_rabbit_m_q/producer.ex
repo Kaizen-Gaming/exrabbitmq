@@ -132,10 +132,7 @@ defmodule ExRabbitMQ.Producer do
     quote location: :keep do
       require Logger
 
-      alias ExRabbitMQ.Constants
-      alias ExRabbitMQ.Connection
       alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
-      alias ExRabbitMQ.ChannelRipper
 
       unquote(inner_ast)
 

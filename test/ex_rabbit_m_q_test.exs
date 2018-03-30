@@ -4,6 +4,7 @@ defmodule ExRabbitMQTest do
   alias ExRabbitMQ.Connection
   alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
   alias ExRabbitMQ.Consumer.QueueConfig
+  alias ExRabbitMQ.State
 
   test "publishing a message and then consuming it" do
     # first we start the connection supervisor
@@ -134,7 +135,7 @@ defmodule ExRabbitMQProducerTest do
       xrmq_init(connection_config, state)
       |> xrmq_extract_state()
 
-    send(tester_pid, {:producer_connection_open, xrmq_get_connection_pid()})
+    send(tester_pid, {:producer_connection_open, State.get_connection_pid()})
 
     send(tester_pid, {:producer_state, new_state})
 
@@ -184,7 +185,7 @@ defmodule ExRabbitMQConsumerTest do
       xrmq_init(connection_config, queue_config, state)
       |> xrmq_extract_state()
 
-    send(tester_pid, {:consumer_connection_open, xrmq_get_connection_pid()})
+    send(tester_pid, {:consumer_connection_open, State.get_connection_pid()})
 
     send(tester_pid, {:consumer_state, new_state})
 
