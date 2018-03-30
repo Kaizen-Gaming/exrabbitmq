@@ -1,8 +1,23 @@
 defmodule ExRabbitMQ.AST.Common do
-  @moduledoc false
-  # @moduledoc """
-  # AST holding module for the consumer and producer behaviours.
-  # """
+  @moduledoc """
+  Common function and types for `ExRabbitMQ.Consumer` and `ExRabbitMQ.Producer` modules.
+  """
+
+  @type connection ::
+          atom
+          | ExRabbitMQ.Connection.Config.t()
+
+  @type queue ::
+          atom
+          | ExRabbitMQ.Consumer.QueueConfig.t()
+
+  @type result ::
+          {:ok, state :: term}
+          | {:error, reason :: term, state :: term}
+
+  @type basic_publish_result ::
+          :ok
+          | {:error, reason :: :blocked | :closing | :no_channel}
 
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.
@@ -44,6 +59,11 @@ defmodule ExRabbitMQ.AST.Common do
 
       def xrmq_extract_state({:ok, state}), do: state
       def xrmq_extract_state({:error, _, state}), do: state
+
+      @deprecated "Use ExRabbitMQ.Connection.Config.from_env/2 or ExRabbitMQ.Consumer.QueueConfig.from_env/2 instead"
+      def xrmq_get_env_config(key) do
+        Application.get_env(:exrabbitmq, key)
+      end
 
       @deprecated "Use ExRabbitMQ.State.get_connection_config/0 instead"
       def xrmq_get_connection_config do

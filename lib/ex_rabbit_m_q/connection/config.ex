@@ -1,10 +1,6 @@
 defmodule ExRabbitMQ.Connection.Config do
   @moduledoc """
-  A stucture holding the necessary information about a connection to a RabbitMQ node.
-
-  ```elixir
-  defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]
-  ```
+  A structure holding the necessary information about a connection to a RabbitMQ node.
 
   #### Connection configuration example:
 
@@ -38,29 +34,25 @@ defmodule ExRabbitMQ.Connection.Config do
 
   @name __MODULE__
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+    username: String.t(),
+    password: String.t(),
+    host: String.t(),
+    port: pos_integer,
+    vhost: String.t(),
+    heartbeat: pos_integer,
+    reconnect_after: pos_integer,
+  }
 
   defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]
 
   @doc """
-  Returns a part of the `:exrabbitmq` configuration section, specified with the
-  `key` argument.
-
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
-  """
-  @spec from_env(key :: atom | module) :: t()
-  def from_env(key) do
-    from_env(:ex_rabbitmq, key)
-  end
-
-  @doc """
   Returns a part of the `app` configuration section, specified with the
-  `key` argument.
-
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
+  `key` argument as a `ExRabbitMQ.Connection.Config` struct.
+  If the `app` argument is omitted, it defaults to `:ex_rabbitmq`.
   """
   @spec from_env(app :: atom, key :: atom | module) :: t()
-  def from_env(app, key) do
+  def from_env(app \\ :ex_rabbitmq, key) do
     config = Application.get_env(app, key, [])
 
     %@name{
@@ -74,6 +66,9 @@ defmodule ExRabbitMQ.Connection.Config do
     }
   end
 
+  @doc """
+  Merges an existing `ExRabbitMQ.Connection.Config` struct the default values when these are `nil`.
+  """
   @spec merge_defaults(config :: t()) :: t()
   def merge_defaults(%@name{} = config) do
     %@name{

@@ -11,7 +11,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
 
   @name __MODULE__
 
-  @typep tid :: :ets.tid() | atom
+  @type tid :: :ets.tid() | atom
 
   @doc """
   Creates a new private [ETS](http://erlang.org/doc/man/ets.html) table for keeping
@@ -48,7 +48,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
   Send the `message` to all processes that have subscribed previously with `#{@name}.subscribe/2`
   in the table `tid`. If the process is not alive, it will be automatically get unsubscribed.
   """
-  @spec publish(tid :: tid, message :: any) :: :ok
+  @spec publish(tid :: tid, message :: term) :: :ok
   def publish(tid, message) do
     tid
     |> :ets.select([{:_, [], [:"$_"]}])

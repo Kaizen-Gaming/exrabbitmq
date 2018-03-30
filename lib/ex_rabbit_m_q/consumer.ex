@@ -60,96 +60,63 @@ defmodule ExRabbitMQ.Consumer do
   ```
   """
 
-  @doc """
-  Initiates a connection or reuses an existing one.
+  alias ExRabbitMQ.AST.Common, as: C
 
-  When a connection is established then a new channel is opened.
+  require ExRabbitMQ.AST.Common
+  require ExRabbitMQ.AST.Consumer.GenServer
+  require ExRabbitMQ.AST.Consumer.GenStage
 
-  Next, `c:xrmq_channel_setup/2` is called to do any extra work on the opened channel.
-
-  If `start_consuming` is `true` then `c:xrmq_consume/1` is called automatically.
-
-  This variant accepts atoms as the arguments for the `connection_key` and `queue_key` parameters,
-  and uses these atoms to read the consumer's configuration.
-
-  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
-
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
-  """
-  @callback xrmq_init(connection_key :: atom, queue_key :: atom, start_consuming :: boolean, state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @type callback_result ::
+          {:noreply, state :: term}
+          | {:noreply, state :: term, timeout | :hibernate}
+          | {:noreply, [event :: term], state :: term}
+          | {:noreply, [event :: term], state :: term, :hibernate}
+          | {:stop, reason :: term, state :: term}
 
   @doc """
+  Setup the process for consuming a RabbitMQ queue.
+
   Initiates a connection or reuses an existing one.
-
   When a connection is established then a new channel is opened.
-
   Next, `c:xrmq_channel_setup/2` is called to do any extra work on the opened channel.
+  If `start_consuming` is `true` then the process will start consume messages from RabbitMQ.
 
-  If `start_consuming` is `true` then `c:xrmq_consume/1` is called automatically.
-
-  This variant accepts an atom as the argument for the `connection_key` parameter and
-  a `ExRabbitMQ.Consumer.QueueConfig` struct as the argument for the `queue_config` parameter.
-
-  The `connection_key` atom argument is used to read the connection's configuration.
-
-  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
-
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
+  The function accepts the following arguments:
+  * `connection` - The configuration information for the RabbitMQ connection.
+    It can either be a `ExRabbitMQ.Connection.Config` struct or an atom that will be used as the `key` for reading the
+    the `:ex_rabbitmq` configuration part from the enviroment.
+    For more information on how to configure the connection, check `ExRabbitMQ.Connection.Config`.
+  * `queue` - The configuration information for the RabbitMQ queue to consume.
+    It can either be a `ExRabbitMQ.Consumer.QueueConfig` struct or an atom that will be used as the `key` for reading the
+    the `:ex_rabbitmq` configuration part from the enviroment.
+    For more information on how to configure the consuming queue, check `ExRabbitMQ.Connection.Config`.
+  * `start_consuming` - When `true` then `c:xrmq_consume/1` is called automatically after the connection and channel has
+    been established successfully. *Optional: Defaults to `true`.*
+  * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_init(connection_key :: atom, queue_config :: struct, start_consuming :: boolean, state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @callback xrmq_init(
+              connection :: C.connection(),
+              queue :: C.queue(),
+              start_consuming :: boolean,
+              state :: term
+            ) :: C.result()
 
   @doc """
-  Initiates a connection or reuses an existing one.
-
-  When a connection is established then a new channel is opened.
-
-  Next, `c:xrmq_channel_setup/2` is called to do any extra work on the opened channel.
-
-  If `start_consuming` is `true` then `c:xrmq_consume/1` is called automatically.
-
-  This variant accepts a `ExRabbitMQ.Connection` struct as the argument for the `connection_config` parameter and
-  an atom as the argument for the `queue_key` parameter.
-
-  The `queue_key` atom argument is used to read the queue's configuration.
-
-  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  Returns a part of the `:exrabbitmq` configuration section, specified with the `key` argument.
 
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
+
+  **Deprecated:** Use `ExRabbitMQ.Connection.Config.from_env/2` or `ExRabbitMQ.Consumer.QueueConfig.from_env/2` instead.
   """
-  @callback xrmq_init(connection_config :: struct, queue_key :: atom, start_consuming :: boolean, state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
-
-  @doc """
-  Initiates a connection or reuses an existing one.
-
-  When a connection is established then a new channel is opened.
-
-  Next, `c:xrmq_channel_setup/2` is called to do any extra work on the opened channel.
-
-  If `start_consuming` is `true` then `c:xrmq_consume/1` is called automatically.
-
-  This variant accepts a `ExRabbitMQ.Connection` and a `ExRabbitMQ.Consumer.QueueConfig` structs
-  as the arguments for the `connection_config` and `queue_config` parameters.
-
-  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
-
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
-  """
-  @callback xrmq_init(connection_config :: struct, queue_config :: struct, start_consuming :: boolean, state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @callback xrmq_get_env_config(key :: atom) :: keyword
 
   @doc """
   Returns the connection configuration as it was passed to `c:xrmq_init/4`.
 
   This configuration is set in the wrapper process's dictionary.
-
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
+
+  **Deprecated:** Use `ExRabbitMQ.State.get_connection_config/0` instead.
   """
   @callback xrmq_get_connection_config() :: term
 
@@ -157,8 +124,9 @@ defmodule ExRabbitMQ.Consumer do
   Returns the queue configuration as it was passed to `c:xrmq_init/4`.
 
   This configuration is set in the wrapper process's dictionary.
-
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
+
+  **Deprecated:** Use `ExRabbitMQ.State.get_queue_config/0` instead.
   """
   @callback xrmq_get_queue_config() :: term
 
@@ -167,9 +135,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_setup(channel :: term, state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @callback xrmq_channel_setup(channel :: %AMQP.Channel{}, state :: term) :: C.result()
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened,
@@ -177,9 +143,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_open(channel :: term, state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @callback xrmq_channel_open(channel :: %AMQP.Channel{}, state :: term) :: C.result()
 
   @doc """
   This hook is called automatically, if `start_consuming` was `true` when `c:xrmq_init/4`.
@@ -195,9 +159,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_consume(state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @callback xrmq_consume(state :: term) :: C.result()
 
   @doc """
   This hook is called automatically as part of the flow in `c:xrmq_consume/1`.
@@ -208,9 +170,8 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_queue_setup(channel :: term, queue :: String.t(), state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @callback xrmq_queue_setup(channel :: %AMQP.Channel{}, queue :: String.t(), state :: term) ::
+              C.result()
 
   @doc """
   This callback is the only required callback (i.e., without any default implementation) and
@@ -220,12 +181,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_deliver(payload :: term, meta :: term, state :: term) ::
-              {:noreply, new_state :: term}
-              | {:noreply, new_state :: term, timeout | :hibernate}
-              | {:noreply, [event :: term], new_state :: term}
-              | {:noreply, [event :: term], new_state :: term, :hibernate}
-              | {:stop, reason :: term, new_state :: term}
+  @callback xrmq_basic_deliver(payload :: term, meta :: term, state :: term) :: callback_result
 
   @doc """
   This overridable hook is  called as a response to a `:basic_cancel` message.
@@ -235,12 +191,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_cancel(cancellation_info :: any, state :: any) ::
-              {:noreply, new_state :: term}
-              | {:noreply, new_state :: term, timeout | :hibernate}
-              | {:noreply, [event :: term], new_state :: term}
-              | {:noreply, [event :: term], new_state :: term, :hibernate}
-              | {:stop, reason :: term, new_state :: term}
+  @callback xrmq_basic_cancel(cancellation_info :: term, state :: term) :: callback_result
 
   @doc """
   This overridable function can be called whenever `no_ack` is set to `false` and the user
@@ -251,9 +202,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_ack(delivery_tag :: String.t(), state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+  @callback xrmq_basic_ack(delivery_tag :: String.t(), state :: term) :: C.result()
 
   @doc """
   This overridable function can be called whenever `no_ack` is set to `false` and the user wants
@@ -262,45 +211,30 @@ defmodule ExRabbitMQ.Consumer do
   It is passed the `delivery_tag` of the request and by default it simply rejects the message
   as per the RabbitMQ API.
 
-  This function simply calls `c:xrmq_basic_reject/3` with `opts` set to `[]`.
-
-  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
-  """
-  @callback xrmq_basic_reject(delivery_tag :: String.t(), state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
-
-  @doc """
-  This overridable function can be called whenever `no_ack` is set to `false` and the user wants
-  to reject a message.
-
-  It is passed the `delivery_tag` of the request and by default it simply rejects the message
-  as per the RabbitMQ API.
+  If the `opts` argument is omitted, the default value is `[]`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
   @callback xrmq_basic_reject(delivery_tag :: String.t(), opts :: term, state :: term) ::
-              {:ok, new_state :: term}
-              | {:error, reason :: term, new_state :: term}
+              C.result()
 
   @doc """
   This overridable function publishes the `payload` to the `exchange` using the provided `routing_key`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_publish(payload :: term, exchange :: String.t(), routing_key :: String.t(), opts :: [term]) ::
-              :ok
-              | {:error, reason :: :blocked | :closing | :no_channel}
+  @callback xrmq_basic_publish(
+              payload :: term,
+              exchange :: String.t(),
+              routing_key :: String.t(),
+              opts :: [term]
+            ) :: C.basic_publish_result()
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.
   """
   @callback xrmq_extract_state({:ok, state :: term} | {:error, reason :: term, state :: term}) ::
               state :: term
-
-  require ExRabbitMQ.AST.Common
-  require ExRabbitMQ.AST.Consumer.GenServer
-  require ExRabbitMQ.AST.Consumer.GenStage
 
   # credo:disable-for-next-line
   defmacro __using__({:__aliases__, _, [kind]})
@@ -350,7 +284,12 @@ defmodule ExRabbitMQ.Consumer do
         xrmq_init(connection_config, queue_config, start_consuming, state)
       end
 
-      def xrmq_init(%ConnectionConfig{} = connection_config, %QueueConfig{} = queue_config, start_consuming, state) do
+      def xrmq_init(
+            %ConnectionConfig{} = connection_config,
+            %QueueConfig{} = queue_config,
+            start_consuming,
+            state
+          ) do
         connection_config = ConnectionConfig.merge_defaults(connection_config)
         queue_config = QueueConfig.merge_defaults(queue_config)
 
@@ -453,11 +392,7 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
-      def xrmq_basic_reject(delivery_tag, state) do
-        xrmq_basic_reject(delivery_tag, [], state)
-      end
-
-      def xrmq_basic_reject(delivery_tag, opts, state) do
+      def xrmq_basic_reject(delivery_tag, opts \\ [], state) do
         case State.get_channel_info() do
           {nil, _} ->
             {:error, Constants.no_channel_error(), state}

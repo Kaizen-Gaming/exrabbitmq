@@ -1,10 +1,6 @@
 defmodule ExRabbitMQ.Consumer.QueueConfig do
   @moduledoc """
-  A stucture holding the necessary information about a queue that is to be consumed.
-
-  ```elixir
-  defstruct [:queue, :queue_opts, :consume_opts, :exchange, :exchange_opts, :bind_opts]
-  ```
+  A structure holding the necessary information about a queue that is to be consumed.
 
   #### Queue configuration example:
 
@@ -62,17 +58,25 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
 
   @name __MODULE__
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+    queue: String.t(),
+    queue_opts: keyword,
+    exchange: String.t() | nil,
+    exchange_opts: keyword,
+    bind_opts: keyword,
+    qos_opts: keyword,
+    consume_opts: keyword
+  }
 
   defstruct [:queue, :queue_opts, :exchange, :exchange_opts, :bind_opts, :qos_opts, :consume_opts]
 
-  @spec from_env(key :: atom | module) :: t()
-  def from_env(key) do
-    from_env(:ex_rabbitmq, key)
-  end
-
+  @doc """
+  Returns a part of the `app` configuration section, specified with the
+  `key` argument as a `ExRabbitMQ.Consumer.QueueConfig` struct.
+  If the `app` argument is omitted, it defaults to `:ex_rabbitmq`.
+  """
   @spec from_env(app :: atom, key :: atom | module) :: t()
-  def from_env(app, key) do
+  def from_env(app \\ :ex_rabbitmq, key) do
     config = Application.get_env(app, key, [])
 
     %@name{
@@ -86,7 +90,10 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
     }
   end
 
-  @spec from_env(config :: t()) :: t()
+  @doc """
+  Merges an existing `ExRabbitMQ.Consumer.QueueConfig` struct the default values when these are `nil`.
+  """
+  @spec merge_defaults(config :: t()) :: t()
   def merge_defaults(%@name{} = config) do
     %@name{
       queue: config.queue || "",

@@ -5,17 +5,11 @@ defmodule ExRabbitMQ.Connection do
   Consumers and producers share connections and when a connection reaches the limit of **65535** channels, a new
   connection is established.
 
-  Warning: To correctly monitor the open channels, users must not open channels manually (e.g., in the provided hooks).
+  **Warning:** To correctly monitor the open channels, users must not open channels manually (e.g., in the provided hooks).
 
   Internally, a connection `GenServer` uses [`:pg2`](http://erlang.org/doc/man/pg2.html) and
   [`:ets`](http://erlang.org/doc/man/ets.html) to handle local subscriptions of consumers and producers.
-
-  [`:pg2`](http://erlang.org/doc/man/pg2.html) is used to name the pool of connections to RabbitMQ.
-
-  Only local members are considered so clustering cannot cause problems with local subscriptions.
-
-  [`:ets`](http://erlang.org/doc/man/ets.html) is used to hold the subscriptions of consumers and producers that are
-  using the table holding connection `GenServer` instance.
+  Check `ExRabbitMQ.Connection.Group` and `ExRabbitMQ.Connection.PubSub` for more information.
   """
 
   @name __MODULE__
@@ -29,18 +23,19 @@ defmodule ExRabbitMQ.Connection do
   defstruct [:connection, :connection_pid, :ets_consumers, config: %Config{}, stale?: false]
 
   @doc """
-  Starts a new `#{@name}` process and links it with the calling one.
+  Starts a new `ExRabbitMQ.Connection` process and links it with the calling one.
   """
-  def start_link(%Config{} = config) do
-    GenServer.start_link(@name, config)
+  @spec start_link(connection_config :: Config.t()) :: GenServer.on_start()
+  def start_link(%Config{} = connection_config) do
+    GenServer.start_link(@name, connection_config)
   end
 
   @doc """
   Checks whether this process holds a usable connection to RabbitMQ.
 
-  The `connection_pid` is the `GenServer` pid implementing the called `#{@name}`.
+  The `connection_pid` is the `GenServer` pid implementing the called `ExRabbitMQ.Connection`.
   """
-  @spec get(connection_pid :: pid) :: {:ok, %AMQP.Connection{} | nil} | {:error, any}
+  @spec get(connection_pid :: pid) :: {:ok, %AMQP.Connection{} | nil} | {:error, term}
   def get(nil) do
     {:error, :nil_connection_pid}
   end
@@ -62,18 +57,18 @@ defmodule ExRabbitMQ.Connection do
   and thus the maximum allowed 65535 channels, then the subscription is not allowed so that a new connection
   process can be created.
 
-  The argument `connection_pid` is the GenServer pid implementing the called `#{@name}`.
+  The argument `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`.
 
-  The argument `connection_config` is the `ExRabbitMQ.Connection.Config` that the `#{@name}` has to be using in order
+  The argument `connection_config` is the `ExRabbitMQ.Connection.Config` that the `ExRabbitMQ.Connection` has to be using in order
   to allow the subscription.
   """
-  @spec subscribe(connection_pid :: pid, Config.t()) :: boolean
+  @spec subscribe(connection_pid :: pid, connection_config :: Config.t()) :: boolean
   def subscribe(connection_pid, connection_config) do
     GenServer.call(connection_pid, {:subscribe, self(), connection_config})
   end
 
   @doc """
-  Finds a `#{@name}` process in the `ExRabbitMQ.Connection.Group` that has the exact same `connection_config`
+  Finds a `ExRabbitMQ.Connection` process in the `ExRabbitMQ.Connection.Group` that has the exact same `connection_config`
   configuration.
 
   If found, it subscribes the calling process via `self/0` to its `ExRabbitMQ.Connection.PubSub` for events regarding
@@ -81,14 +76,14 @@ defmodule ExRabbitMQ.Connection do
 
   If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains 65535 subscribed processes, and thus
   the maximum allowed 65535 channels, then the subscription is not allowed so that a new connection process can be
-  created. In this case, a new`#{@name}` will be started and returned.
+  created. In this case, a new`ExRabbitMQ.Connection` will be started and returned.
 
-  If not found then a new `#{@name}` will be started and returned.
+  If not found then a new `ExRabbitMQ.Connection` will be started and returned.
 
-  The `connection_config` is the `ExRabbitMQ.Connection.Config` that the `#{@name}` has to be using in order to allow
+  The `connection_config` is the `ExRabbitMQ.Connection.Config` that the `ExRabbitMQ.Connection` has to be using in order to allow
   the subscription.
   """
-  @spec get_subscribe(connection_config :: %Config{}) :: pid
+  @spec get_subscribe(connection_config :: Config.t()) :: pid
   def get_subscribe(connection_config) do
     Group.get_members()
     |> Enum.find(&subscribe(&1, connection_config))
@@ -106,7 +101,7 @@ defmodule ExRabbitMQ.Connection do
   @doc """
   Gracefully closes the RabbitMQ connection and terminates its GenServer handler identified by `connection_pid`.
   """
-  @spec close(pid) :: :ok
+  @spec close(connection_pid :: pid) :: :ok
   def close(connection_pid) do
     GenServer.cast(connection_pid, :close)
   end

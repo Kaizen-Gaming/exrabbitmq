@@ -8,7 +8,7 @@ defmodule ExRabbitMQ.Connection.Group do
   @doc """
   Creates a new process group if not exists and joins the process `pid` to that group.
   """
-  @spec join(pid :: pid | nil) :: :ok | {:error, {:no_such_group, any}}
+  @spec join(pid :: pid | nil) :: :ok | {:error, {:no_such_group, term}}
   def join(pid \\ nil) do
     with :ok <- :pg2.create(@name),
          :ok <- :pg2.join(@name, pid || self()) do
