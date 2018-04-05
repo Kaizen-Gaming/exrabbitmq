@@ -101,12 +101,12 @@ defmodule ExRabbitMQ.Producer do
   @callback xrmq_channel_open(channel :: %AMQP.Channel{}, state :: term) :: C.result()
 
   @doc """
-  This overridable function publishes the `payload` to the `exchange` using the provided `routing_key`.
+  This overridable function publishes the **binary** `payload` to the `exchange` using the provided `routing_key`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
   @callback xrmq_basic_publish(
-              payload :: term,
+              payload :: String.t(),
               exchange :: String.t(),
               routing_key :: String.t(),
               opts :: [term]
@@ -125,19 +125,19 @@ defmodule ExRabbitMQ.Producer do
     quote location: :keep do
       require Logger
 
-      alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
+      alias ExRabbitMQ.Connection.Config, as: XRMQConnectionConfig
 
       unquote(inner_ast)
 
       def xrmq_init(connection_key, state)
           when is_atom(connection_key) do
-        connection_config = ConnectionConfig.from_env(connection_key)
+        connection_config = XRMQConnectionConfig.from_env(connection_key)
 
         xrmq_init(connection_config, state)
       end
 
-      def xrmq_init(%ConnectionConfig{} = connection_config, state) do
-        connection_config = ConnectionConfig.merge_defaults(connection_config)
+      def xrmq_init(%XRMQConnectionConfig{} = connection_config, state) do
+        connection_config = XRMQConnectionConfig.merge_defaults(connection_config)
 
         with :ok <- xrmq_connection_setup(connection_config) do
           xrmq_open_channel(state)

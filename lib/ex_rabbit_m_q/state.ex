@@ -67,7 +67,8 @@ defmodule ExRabbitMQ.State do
   @doc """
   Set the `AMQP.Channel` struct and the channel pid in the process dictionary.
   """
-  @spec set_channel_info(channel :: %AMQP.Channel{} | nil, channel_monitor :: reference | nil) :: term | nil
+  @spec set_channel_info(channel :: %AMQP.Channel{} | nil, channel_monitor :: reference | nil) ::
+          term | nil
   def set_channel_info(channel, channel_monitor) do
     Process.put(Constants.channel_key(), channel)
     Process.put(Constants.channel_monitor_key(), channel_monitor)

@@ -30,8 +30,10 @@ defmodule ExRabbitMQ.AST.Common do
   def ast do
     # credo:disable-for-previous-line
     quote location: :keep do
-      alias ExRabbitMQ.{ChannelRipper, Connection, Constants, State}
-      alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
+      alias ExRabbitMQ.ChannelRipper, as: XRMQChannelRipper
+      alias ExRabbitMQ.Connection, as: XRMQConnection
+      alias ExRabbitMQ.Constants, as: XRMQConstants
+      alias ExRabbitMQ.State, as: XRMQState
 
       def xrmq_channel_setup(_channel, state) do
         {:ok, state}
@@ -47,14 +49,20 @@ defmodule ExRabbitMQ.AST.Common do
         {:stop, :basic_cancel, state}
       end
 
-      def xrmq_basic_publish(payload, exchange, routing_key, opts \\ []) do
-        with {channel, _} when channel !== nil <- State.get_channel_info(),
+      def xrmq_basic_publish(payload, exchange, routing_key, opts \\ [])
+
+      def xrmq_basic_publish(payload, exchange, routing_key, opts) when is_binary(payload) do
+        with {channel, _} when channel !== nil <- XRMQState.get_channel_info(),
              :ok <- AMQP.Basic.publish(channel, exchange, routing_key, payload, opts) do
           :ok
         else
-          {nil, _} -> {:error, Constants.no_channel_error()}
+          {nil, _} -> {:error, XRMQConstants.no_channel_error()}
           error -> {:error, error}
         end
+      end
+
+      def xrmq_basic_publish(payload, _exchange, _routing_key, _opts) do
+        {:error, {:payload_not_binary, payload}}
       end
 
       def xrmq_extract_state({:ok, state}), do: state
@@ -67,16 +75,16 @@ defmodule ExRabbitMQ.AST.Common do
 
       @deprecated "Use ExRabbitMQ.State.get_connection_config/0 instead"
       def xrmq_get_connection_config do
-        State.get_connection_config()
+        XRMQState.get_connection_config()
       end
 
       defp xrmq_connection_setup(connection_config) do
-        with conn_pid when is_pid(conn_pid) <- Connection.get_subscribe(connection_config),
+        with conn_pid when is_pid(conn_pid) <- XRMQConnection.get_subscribe(connection_config),
              true <- Process.link(conn_pid),
-             {:ok, channel_ripper_pid} = ChannelRipper.start() do
-          State.set_connection_pid(conn_pid)
-          State.set_connection_config(connection_config)
-          State.set_channel_ripper_pid(channel_ripper_pid)
+             {:ok, channel_ripper_pid} = XRMQChannelRipper.start() do
+          XRMQState.set_connection_pid(conn_pid)
+          XRMQState.set_connection_config(connection_config)
+          XRMQState.set_channel_ripper_pid(channel_ripper_pid)
           :ok
         else
           nil -> {:error, :nil_connection_pid}
@@ -86,13 +94,13 @@ defmodule ExRabbitMQ.AST.Common do
       end
 
       defp xrmq_open_channel(state) do
-        case Connection.get(State.get_connection_pid()) do
+        case XRMQConnection.get(XRMQState.get_connection_pid()) do
           {:ok, connection} ->
             case AMQP.Channel.open(connection) do
               {:ok, %AMQP.Channel{pid: pid} = channel} ->
-                ChannelRipper.set_channel(State.get_channel_ripper_pid(), channel)
+                XRMQChannelRipper.set_channel(XRMQState.get_channel_ripper_pid(), channel)
                 channel_monitor = Process.monitor(pid)
-                State.set_channel_info(channel, channel_monitor)
+                XRMQState.set_channel_info(channel, channel_monitor)
 
                 Logger.debug("opened a new channel")
 
@@ -101,13 +109,13 @@ defmodule ExRabbitMQ.AST.Common do
                 end
 
               :closing ->
-                State.set_channel_info(nil, nil)
+                XRMQState.set_channel_info(nil, nil)
 
                 {:error, :closing, state}
 
               error ->
                 Logger.error("could not open a new channel: #{inspect(error)}")
-                State.set_channel_info(nil, nil)
+                XRMQState.set_channel_info(nil, nil)
                 Process.exit(self(), {:xrmq_channel_open_error, error})
 
                 {:error, error, state}

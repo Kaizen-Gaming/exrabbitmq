@@ -35,14 +35,14 @@ defmodule ExRabbitMQ.Connection.Config do
   @name __MODULE__
 
   @type t :: %__MODULE__{
-    username: String.t(),
-    password: String.t(),
-    host: String.t(),
-    port: pos_integer,
-    vhost: String.t(),
-    heartbeat: pos_integer,
-    reconnect_after: pos_integer,
-  }
+          username: String.t(),
+          password: String.t(),
+          host: String.t(),
+          port: pos_integer,
+          vhost: String.t(),
+          heartbeat: pos_integer,
+          reconnect_after: pos_integer
+        }
 
   defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]
 

@@ -59,14 +59,14 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
   @name __MODULE__
 
   @type t :: %__MODULE__{
-    queue: String.t(),
-    queue_opts: keyword,
-    exchange: String.t() | nil,
-    exchange_opts: keyword,
-    bind_opts: keyword,
-    qos_opts: keyword,
-    consume_opts: keyword
-  }
+          queue: String.t(),
+          queue_opts: keyword,
+          exchange: String.t() | nil,
+          exchange_opts: keyword,
+          bind_opts: keyword,
+          qos_opts: keyword,
+          consume_opts: keyword
+        }
 
   defstruct [:queue, :queue_opts, :exchange, :exchange_opts, :bind_opts, :qos_opts, :consume_opts]
 

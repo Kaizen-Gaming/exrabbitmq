@@ -135,7 +135,7 @@ defmodule ExRabbitMQProducerTest do
       xrmq_init(connection_config, state)
       |> xrmq_extract_state()
 
-    send(tester_pid, {:producer_connection_open, State.get_connection_pid()})
+    send(tester_pid, {:producer_connection_open, XRMQState.get_connection_pid()})
 
     send(tester_pid, {:producer_state, new_state})
 
@@ -185,7 +185,7 @@ defmodule ExRabbitMQConsumerTest do
       xrmq_init(connection_config, queue_config, state)
       |> xrmq_extract_state()
 
-    send(tester_pid, {:consumer_connection_open, State.get_connection_pid()})
+    send(tester_pid, {:consumer_connection_open, XRMQState.get_connection_pid()})
 
     send(tester_pid, {:consumer_state, new_state})
 

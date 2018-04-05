@@ -13,7 +13,7 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
   """
   def ast do
     quote location: :keep do
-      alias ExRabbitMQ.State
+      alias ExRabbitMQ.State, as: XRMQState
 
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         new_state =
@@ -31,9 +31,9 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
       end
 
       def handle_info({:DOWN, ref, :process, pid, reason}, state) do
-        case State.get_channel_info do
+        case XRMQState.get_channel_info() do
           {_, ^ref} ->
-            State.set_channel_info(nil, nil)
+            XRMQState.set_channel_info(nil, nil)
 
             new_state =
               state
