@@ -1,218 +1,107 @@
 defmodule ExRabbitMQTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
-  alias ExRabbitMQ.Connection
   alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
-  alias ExRabbitMQ.Consumer.QueueConfig
-  alias ExRabbitMQ.State
+  alias ExRabbitMQ.Connection
+  alias ExRabbitMQ.Connection.Group
 
-  test "publishing a message and then consuming it" do
+  @defaults %{
+    connection_config: TestConfig.connection_config(),
+    queue_config: TestConfig.queue_config(),
+    test_message: "ExRabbitMQ test",
+    tester_pid: nil
+  }
+
+  setup_all do
+
     # first we start the connection supervisor
     # it holds the template for the GenServer wrapping connections to RabbitMQ
-    ExRabbitMQ.Connection.Supervisor.start_link([])
+    connection_sup =
+      case ExRabbitMQ.Connection.Supervisor.start_link([]) do
+        {:ok, pid} -> pid
+        {:error, {:already_started, pid}} -> pid
+      end
 
-    # configuration for a default local RabbitMQ installation
-    connection_config = %ConnectionConfig{
-      username: "guest",
-      password: "guest",
-      host: "127.0.0.1",
-      reconnect_after: 500
-    }
+    on_exit(fn -> Process.exit(connection_sup, :kill) end)
+  end
 
-    test_queue = "xrmq_test"
-    test_exchange = "xrmq_test_exchange"
+  test "publishing a message and then consuming it with a re-usable connection" do
+    consumers = create(10, :consumer)
+    producers = create(10, :producer)
 
-    # configuration for a test queue where we will publish to/consumer from
-    queue_config = %QueueConfig{
-      queue: test_queue,
-      queue_opts: [durable: false, auto_delete: true],
-      exchange: test_exchange,
-      exchange_opts: [type: :direct, durable: false, auto_delete: true],
-      bind_opts: [],
-      qos_opts: [prefetch_count: 1],
-      consume_opts: [no_ack: true]
-    }
+    [consumers_connection_pid] = consumers |> Map.get(:connection_pids) |> Enum.uniq()
+    [producers_connection_pid] = producers |> Map.get(:connection_pids) |> Enum.uniq()
 
-    # the test message to be published and then consumed
-    test_message = "ExRabbitMQ test"
-
-    # we start the consumer so that the queue will be declared
-    {:ok, consumer} = ExRabbitMQConsumerTest.start_link(self(), connection_config, queue_config)
-
-    # we monitor the consumer so that we can wait for it to exit
-    consumer_monitor = Process.monitor(consumer)
-
-    # the consumer tells us that the connection has been opened
-    assert_receive({:consumer_connection_open, consumer_connection_pid},
-      500, "failed to open a connection for the consumer")
-
-    # we monitor the consumer's connection GenServer wrapper so that we can wait for it to exit
-    consumer_connection_monitor = Process.monitor(consumer_connection_pid)
-
-    # is the consumer's connection truly ready?
-    assert({:ok, _consumer_connection} = Connection.get(consumer_connection_pid))
-
-    # are the consumer's channel and queue properly set up?
-    assert_receive({:consumer_state, %{consumer_channel_setup_ok: true, consumer_queue_setup_ok: {:ok, ^test_queue}}},
-      500, "failed to properly setup the consumer's channel and/or queue")
-
-    # we start the producer to publish our test message
-    {:ok, producer} = ExRabbitMQProducerTest.start_link(self(), connection_config, test_queue, test_message)
-
-    # we monitor the producer so that we can wait for it to exit
-    producer_monitor = Process.monitor(producer)
-
-    # the producer tells us that the connection has been opened
-    assert_receive({:producer_connection_open, producer_connection_pid},
-      500, "failed to open a connection for the producer")
-
-    # we monitor the producer's connection GenServer wrapper so that we can wait for it to exit
-    producer_connection_monitor = Process.monitor(producer_connection_pid)
-
-    # is the producer's connection truly ready?
-    assert({:ok, _producer_connection} = Connection.get(consumer_connection_pid))
-
-    # is the producers's channel properly set up?
-    assert_receive({:producer_state, %{producer_channel_setup_ok: true}},
-      500, "failed to properly setup the producer's channel")
-
-    # the producer must have reused the same connection as the consumer
-    # when this connection is used for the maximum of 65535 channels,
+    # all the producer and the consumers  must have reused the same connection
+    # when this connection is used for the maximum of channels,
     # a new connection will be used for the next consumer/producer that needs one
-    assert consumer_connection_pid === producer_connection_pid
-
-    # the producer tells us that the message has been published
-    assert_receive({:publish, :ok}, 500, "failed to publish test message #{test_message}")
-
-    # the consumer tells us that the message that we published is the same we have consumed
-    assert_receive({:consume, ^test_message}, 500, "failed to receive test message #{test_message}")
+    assert consumers_connection_pid === producers_connection_pid
 
     # we stop everything
-    ExRabbitMQConsumerTest.stop(consumer)
-    ExRabbitMQProducerTest.stop(producer)
+    consumers |> Map.get(:pids) |> Enum.each(&TestConsumer.stop(&1))
+    producers |> Map.get(:pids) |> Enum.each(&TestProducer.stop(&1))
+    Group.get_members() |> Enum.each(&Connection.close(&1))
 
+    # we make sure that everything has stopped as required before we exit
+    consumers |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+    consumers |> Map.get(:connection_monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+    producers |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+    producers |> Map.get(:connection_monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+  end
+
+  test "max channels per connection" do
+    connection_config = %ConnectionConfig{TestConfig.connection_config() | max_channels: 1}
+
+    %{
+      monitors: [consumer_monitor],
+      pids: [consumer],
+      connection_pids: [consumer_connection_pid],
+      connection_monitors: [consumer_connection_monitor]
+    } = create(1, :consumer, %{connection_config: connection_config})
+
+    %{
+      monitors: [producer_monitor],
+      pids: [producer],
+      connection_pids: [producer_connection_pid],
+      connection_monitors: [producer_connection_monitor]
+    } = create(1, :producer, %{connection_config: connection_config})
+
+    assert(consumer_connection_pid !== producer_connection_pid)
+
+    # we stop everything
+    TestConsumer.stop(consumer)
+    TestProducer.stop(producer)
     Connection.close(consumer_connection_pid)
     Connection.close(producer_connection_pid)
 
     # we make sure that everything has stopped as required before we exit
-    assert_receive({:DOWN, ^consumer_monitor, :process, _pid, _reason}, 500)
-    assert_receive({:DOWN, ^producer_monitor, :process, _pid, _reason}, 500)
-    assert_receive({:DOWN, ^consumer_connection_monitor, :process, _pid, _reason}, 500)
-    assert_receive({:DOWN, ^producer_connection_monitor, :process, _pid, _reason}, 500)
-  end
-end
-
-defmodule ExRabbitMQProducerTest do
-  @moduledoc false
-
-  use GenServer
-  use ExRabbitMQ.Producer
-
-  def start_link(tester_pid, connection_config, test_queue, test_message) do
-    GenServer.start_link(__MODULE__, %{
-      tester_pid: tester_pid,
-      connection_config: connection_config,
-      test_queue: test_queue,
-      test_message: test_message})
+    TestHelper.assert_stop(consumer_monitor)
+    TestHelper.assert_stop(consumer_connection_monitor)
+    TestHelper.assert_stop(producer_monitor)
+    TestHelper.assert_stop(producer_connection_monitor)
   end
 
-  def init(state) do
-    GenServer.cast(self(), :init)
+  defp create(number, producer_or_consumer, opts \\ @defaults) do
 
-    {:ok, state}
-  end
+    opts =
+      @defaults
+      |> Map.merge(opts)
+      |> Map.put(:tester_pid, self())
 
-  def stop(producer_pid) do
-    GenServer.cast(producer_pid, :stop)
-  end
+    1..number
+    |> Enum.reduce(%{monitors: [], pids: [], connection_pids: [], connection_monitors: []}, fn _, acc ->
+      [
+        pid: pid,
+        connection_pid: connection_pid,
+        monitor: monitor,
+        connection_monitor: connection_monitor
+      ] = TestHelper.start(producer_or_consumer, opts)
 
-  def handle_cast(:init, %{
-    tester_pid: tester_pid,
-    connection_config: connection_config,
-    test_queue: test_queue,
-    test_message: test_message} = state) do
-    new_state =
-      xrmq_init(connection_config, state)
-      |> xrmq_extract_state()
-
-    send(tester_pid, {:producer_connection_open, XRMQState.get_connection_pid()})
-
-    send(tester_pid, {:producer_state, new_state})
-
-    publish_result = xrmq_basic_publish(test_message, "", test_queue)
-
-    send(tester_pid, {:publish, publish_result})
-
-    {:noreply, new_state}
-  end
-
-  def handle_cast(:stop, state) do
-    {:stop, :normal, state}
-  end
-
-  def handle_info(_, state) do
-    {:noreply, state}
-  end
-
-  def xrmq_channel_setup(channel, state) do
-    {:ok, state} = super(channel, state)
-    {:ok, Map.put(state, :producer_channel_setup_ok, true)}
-  end
-end
-
-defmodule ExRabbitMQConsumerTest do
-  @moduledoc false
-
-  use GenServer
-  use ExRabbitMQ.Consumer, GenServer
-
-  def start_link(tester_pid, connection_config, queue_config) do
-    GenServer.start_link(__MODULE__, %{tester_pid: tester_pid, connection_config: connection_config, queue_config: queue_config})
-  end
-
-  def init(state) do
-    GenServer.cast(self(), :init)
-
-    {:ok, state}
-  end
-
-  def stop(consumer_pid) do
-    GenServer.cast(consumer_pid, :stop)
-  end
-
-  def handle_cast(:init, %{tester_pid: tester_pid, connection_config: connection_config, queue_config: queue_config} = state) do
-    new_state =
-      xrmq_init(connection_config, queue_config, state)
-      |> xrmq_extract_state()
-
-    send(tester_pid, {:consumer_connection_open, XRMQState.get_connection_pid()})
-
-    send(tester_pid, {:consumer_state, new_state})
-
-    {:noreply, new_state}
-  end
-
-  def handle_cast(:stop, state) do
-    {:stop, :normal, state}
-  end
-
-  def handle_info(_, state) do
-    {:noreply, state}
-  end
-
-  def xrmq_basic_deliver(payload, _meta, %{tester_pid: tester_pid} = state) do
-    send(tester_pid, {:consume, payload})
-
-    {:noreply, state}
-  end
-
-  def xrmq_channel_setup(channel, state) do
-    {:ok, state} = super(channel, state)
-    {:ok, Map.put(state, :consumer_channel_setup_ok, true)}
-  end
-
-  def xrmq_queue_setup(channel, queue, state) do
-    {:ok, state} = super(channel, queue, state)
-    {:ok, Map.put(state, :consumer_queue_setup_ok, {:ok, queue})}
+      acc
+      |> Map.update!(:pids, &[pid | &1])
+      |> Map.update!(:connection_pids, &[connection_pid | &1])
+      |> Map.update!(:monitors, &[monitor | &1])
+      |> Map.update!(:connection_monitors, &[connection_monitor | &1])
+    end)
   end
 end

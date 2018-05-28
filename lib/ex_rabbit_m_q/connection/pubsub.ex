@@ -1,17 +1,18 @@
 defmodule ExRabbitMQ.Connection.PubSub do
   @moduledoc """
-  Wrapper module around an [ETS](http://erlang.org/doc/man/ets.html) table for managing 
+  Wrapper module around an [ETS](http://erlang.org/doc/man/ets.html) table for managing
   subscriptions and publishing messages regarding the connection status to the subscribed
   (consumer & producer) processes.
 
-  Note: Because a RabbitMQ connection can have up to **65535** channels (usually
-  one for each consumer or producer process), the subscription will be declined
-  when that limit is reached.
+  Note: Because the maximum number of channels per connection is configurable (default: 65535),
+  the subscription will be declined when that limit is reached.
   """
 
   @name __MODULE__
 
   @type tid :: :ets.tid() | atom
+
+  alias ExRabbitMQ.Connection.Config
 
   @doc """
   Creates a new private [ETS](http://erlang.org/doc/man/ets.html) table for keeping
@@ -26,9 +27,9 @@ defmodule ExRabbitMQ.Connection.PubSub do
   Insert the process `pid` in the table `tid`, so that it receives messages send
   using the `ExRabbitMQ.Connection.PubSub.publish/2`.
   """
-  @spec subscribe(tid :: tid, pid :: pid) :: boolean
-  def subscribe(tid, pid) do
-    if size(tid) >= 65_535 do
+  @spec subscribe(tid :: tid, connection_config :: Config.t(), pid :: pid) :: boolean
+  def subscribe(tid, %{max_channels: max_channels} = _connection_config, pid) do
+    if size(tid) >= max_channels do
       false
     else
       :ets.insert_new(tid, {pid})

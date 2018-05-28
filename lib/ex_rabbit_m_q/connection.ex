@@ -2,8 +2,8 @@ defmodule ExRabbitMQ.Connection do
   @moduledoc """
   A `GenServer` implementing a long running connection to a RabbitMQ server.
 
-  Consumers and producers share connections and when a connection reaches the limit of **65535** channels, a new
-  connection is established.
+  Consumers and producers share connections and when a connection reaches the default limit of **65535** channels
+  or the maximum channels per connection that has been set in the configuration, a new connection is established.
 
   **Warning:** To correctly monitor the open channels, users must not open channels manually (e.g., in the provided hooks).
 
@@ -53,9 +53,8 @@ defmodule ExRabbitMQ.Connection do
   If the `connection_config` configuration does not match the one of the `connection_pid`'s' process, then the
   subscription is not allowed.
 
-  If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains 65535 subscribed processes,
-  and thus the maximum allowed 65535 channels, then the subscription is not allowed so that a new connection
-  process can be created.
+  If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains the maximum subscribed processes,
+  then the subscription is not allowed so that a new connection process can be created.
 
   The argument `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`.
 
@@ -74,9 +73,9 @@ defmodule ExRabbitMQ.Connection do
   If found, it subscribes the calling process via `self/0` to its `ExRabbitMQ.Connection.PubSub` for events regarding
   the connection status and then returns its process ID.
 
-  If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains 65535 subscribed processes, and thus
-  the maximum allowed 65535 channels, then the subscription is not allowed so that a new connection process can be
-  created. In this case, a new`ExRabbitMQ.Connection` will be started and returned.
+  If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains the maximum subscribed processes,
+  then the subscription is not allowed so that a new connection process can be created.
+  In this case, a new`ExRabbitMQ.Connection` will be started and returned.
 
   If not found then a new `ExRabbitMQ.Connection` will be started and returned.
 
@@ -128,22 +127,27 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc false
-  def handle_call({:subscribe, consumer_pid, connection_config}, _from, state) do
-    %{config: config, ets_consumers: ets_consumers} = state
-
+  def handle_call(
+        {:subscribe, consumer_pid, connection_config},
+        _from,
+        %{config: config, ets_consumers: ets_consumers} = state
+      )
+      when config === connection_config do
     result =
-      if config === connection_config do
-        with true <- PubSub.subscribe(ets_consumers, consumer_pid) do
-          Process.monitor(consumer_pid)
-          true
-        end
-      else
-        false
+      with true <- PubSub.subscribe(ets_consumers, connection_config, consumer_pid) do
+        Process.monitor(consumer_pid)
+        true
       end
 
     new_state = %{state | stale?: false}
 
     {:reply, result, new_state}
+  end
+
+  @doc false
+  def handle_call({:subscribe, _consumer_pid, _connection_config}, _from, state) do
+    new_state = %{state | stale?: false}
+    {:reply, false, new_state}
   end
 
   @doc false
@@ -154,10 +158,10 @@ defmodule ExRabbitMQ.Connection do
     if connection === nil do
       {:stop, :normal, state}
     else
+      Group.leave(connection_pid)
       Process.unlink(connection_pid)
       AMQP.Connection.close(connection)
       PubSub.publish(ets_consumers, {:xrmq_connection, {:closed, nil}})
-
       new_state = %{state | connection: nil, connection_pid: nil}
 
       {:stop, :normal, new_state}

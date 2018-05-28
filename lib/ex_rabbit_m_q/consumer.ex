@@ -296,10 +296,15 @@ defmodule ExRabbitMQ.Consumer do
             start_consuming,
             state
           ) do
-        connection_config = XRMQConnectionConfig.merge_defaults(connection_config)
         queue_config = XRMQQueueConfig.merge_defaults(queue_config)
 
-        with :ok <- xrmq_connection_setup(connection_config) do
+        connection_config_result =
+          connection_config
+          |> XRMQConnectionConfig.merge_defaults()
+          |> XRMQConnectionConfig.validate_connection_config()
+
+        with {:ok, new_connection_config} <- connection_config_result,
+              :ok <- xrmq_connection_setup(new_connection_config) do
           XRMQState.set_queue_config(queue_config)
           xrmq_open_channel_consume(state, start_consuming)
         end
