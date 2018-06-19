@@ -14,7 +14,9 @@ defmodule ExRabbitMQ.Connection do
 
   @name __MODULE__
 
-  alias ExRabbitMQ.Connection.{Config, PubSub, Group, Supervisor}
+  alias ExRabbitMQ.Connection.{Config, PubSub}
+  alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
+  alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
 
   use GenServer, restart: :transient
 
@@ -28,6 +30,17 @@ defmodule ExRabbitMQ.Connection do
   @spec start_link(connection_config :: Config.t()) :: GenServer.on_start()
   def start_link(%Config{} = connection_config) do
     GenServer.start_link(@name, connection_config)
+  end
+
+  @doc false
+  def init(%{cleanup_after: cleanup_after} = config) do
+    Process.flag(:trap_exit, true)
+    ets_consumers = PubSub.new()
+
+    Process.send(self(), :connect, [])
+    schedule_cleanup(cleanup_after)
+
+    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
   end
 
   @doc """
@@ -47,26 +60,6 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc """
-  Tries to subscribe the calling process, via `self/0` to the `ExRabbitMQ.Connection.PubSub` of the `connection_pid`
-  process.
-
-  If the `connection_config` configuration does not match the one of the `connection_pid`'s' process, then the
-  subscription is not allowed.
-
-  If the `ExRabbitMQ.Connection.PubSub` of the connection process already contains the maximum subscribed processes,
-  then the subscription is not allowed so that a new connection process can be created.
-
-  The argument `connection_pid` is the GenServer pid implementing the called `ExRabbitMQ.Connection`.
-
-  The argument `connection_config` is the `ExRabbitMQ.Connection.Config` that the `ExRabbitMQ.Connection` has to be using in order
-  to allow the subscription.
-  """
-  @spec subscribe(connection_pid :: pid, connection_config :: Config.t()) :: boolean
-  def subscribe(connection_pid, connection_config) do
-    GenServer.call(connection_pid, {:subscribe, self(), connection_config})
-  end
-
-  @doc """
   Finds a `ExRabbitMQ.Connection` process in the `ExRabbitMQ.Connection.Group` that has the exact same `connection_config`
   configuration.
 
@@ -82,18 +75,11 @@ defmodule ExRabbitMQ.Connection do
   The `connection_config` is the `ExRabbitMQ.Connection.Config` that the `ExRabbitMQ.Connection` has to be using in order to allow
   the subscription.
   """
-  @spec get_subscribe(connection_config :: Config.t()) :: pid
+  @spec get_subscribe(connection_config :: Config.t()) :: {:ok, pid} | {:error, atom()}
   def get_subscribe(connection_config) do
-    Group.get_members()
-    |> Enum.find(&subscribe(&1, connection_config))
-    |> case do
-      nil ->
-        {:ok, pid} = Supervisor.start_child(connection_config)
-        subscribe(pid, connection_config)
-        pid
-
-      pid ->
-        pid
+    case PoolSupervisor.start_child(connection_config) do
+      {:error, {:already_started, pool_pid}} -> subscribe(pool_pid, connection_config)
+      {:ok, pool_pid} -> subscribe(pool_pid, connection_config)
     end
   end
 
@@ -106,16 +92,9 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc false
-  def init(config) do
-    Process.flag(:trap_exit, true)
-
-    :ok = Group.join()
-    ets_consumers = PubSub.new()
-
-    Process.send(self(), :connect, [])
-    schedule_cleanup()
-
-    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
+  @spec get_weight(connection_pid :: pid) :: non_neg_integer | :full
+  def get_weight(connection_pid) do
+    GenServer.call(connection_pid, :get_weight)
   end
 
   @doc false
@@ -130,24 +109,26 @@ defmodule ExRabbitMQ.Connection do
   def handle_call(
         {:subscribe, consumer_pid, connection_config},
         _from,
-        %{config: config, ets_consumers: ets_consumers} = state
-      )
-      when config === connection_config do
-    result =
-      with true <- PubSub.subscribe(ets_consumers, connection_config, consumer_pid) do
-        Process.monitor(consumer_pid)
-        true
-      end
-
-    new_state = %{state | stale?: false}
-
-    {:reply, result, new_state}
+        %{ets_consumers: ets_consumers} = state
+      ) do
+    PubSub.subscribe(ets_consumers, connection_config, consumer_pid)
+    Process.monitor(consumer_pid)
+    {:reply, true, %{state | stale?: false}}
   end
 
   @doc false
-  def handle_call({:subscribe, _consumer_pid, _connection_config}, _from, state) do
-    new_state = %{state | stale?: false}
-    {:reply, false, new_state}
+  def handle_call(
+        :get_weight,
+        _from,
+        %{ets_consumers: ets_consumers, config: %{max_channels: max_channels}} = state
+      ) do
+    reply =
+      case PubSub.size(ets_consumers) do
+        connection_channels when connection_channels < max_channels -> connection_channels
+        _ -> :full
+      end
+
+    {:reply, reply, state}
   end
 
   @doc false
@@ -158,9 +139,7 @@ defmodule ExRabbitMQ.Connection do
     if connection === nil do
       {:stop, :normal, state}
     else
-      Group.leave(connection_pid)
-      Process.unlink(connection_pid)
-      AMQP.Connection.close(connection)
+      cleanup_connection(connection_pid, connection)
       PubSub.publish(ets_consumers, {:xrmq_connection, {:closed, nil}})
       new_state = %{state | connection: nil, connection_pid: nil}
 
@@ -227,10 +206,16 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @doc false
-  def handle_info(:cleanup, state) do
-    %{ets_consumers: ets_consumers, stale?: stale?} = state
+  def handle_info(:cleanup, config: %{cleanup_after: cleanup_after} = state) do
+    %{
+      ets_consumers: ets_consumers,
+      connection: connection,
+      connection_pid: connection_pid,
+      stale?: stale?
+    } = state
 
     if stale? do
+      cleanup_connection(connection_pid, connection)
       {:stop, :normal, state}
     else
       new_state =
@@ -239,7 +224,7 @@ defmodule ExRabbitMQ.Connection do
           _ -> state
         end
 
-      schedule_cleanup()
+      schedule_cleanup(cleanup_after)
 
       {:noreply, new_state}
     end
@@ -250,7 +235,25 @@ defmodule ExRabbitMQ.Connection do
     {:noreply, state}
   end
 
-  defp schedule_cleanup do
-    Process.send_after(self(), :cleanup, 5000)
+  defp subscribe(pool_pid, connection_config) do
+    case :poolboy.checkout(pool_pid) do
+      status when status in [:full, :overweighted] ->
+        {:error, :no_available_connection}
+
+      connection_pid ->
+        GenServer.call(connection_pid, {:subscribe, self(), connection_config})
+        :poolboy.checkin(pool_pid, connection_pid)
+        {:ok, connection_pid}
+    end
+  end
+
+  defp schedule_cleanup(cleanup_after) do
+    Process.send_after(self(), :cleanup, cleanup_after)
+  end
+
+  defp cleanup_connection(connection_pid, connection) do
+    RegistryPool.unregister(connection_pid)
+    Process.unlink(connection_pid)
+    AMQP.Connection.close(connection)
   end
 end

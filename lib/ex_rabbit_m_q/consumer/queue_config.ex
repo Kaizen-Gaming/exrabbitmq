@@ -75,8 +75,16 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
   `key` argument as a `ExRabbitMQ.Consumer.QueueConfig` struct.
   If the `app` argument is omitted, it defaults to `:exrabbitmq`.
   """
-  @spec from_env(app :: atom, key :: atom | module) :: t()
-  def from_env(app \\ :exrabbitmq, key) do
+  @spec get(app :: atom, queue_config :: atom | t()) :: t()
+  def get(app \\ :exrabbitmq, queue_config) do
+    case queue_config do
+      queue_config when is_atom(queue_config) -> from_env(app, queue_config)
+      _ -> queue_config
+    end
+    |> merge_defaults()
+  end
+
+  defp from_env(app, key) do
     config = Application.get_env(app, key, [])
 
     %@name{
@@ -93,8 +101,7 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
   @doc """
   Merges an existing `ExRabbitMQ.Consumer.QueueConfig` struct the default values when these are `nil`.
   """
-  @spec merge_defaults(config :: t()) :: t()
-  def merge_defaults(%@name{} = config) do
+  defp merge_defaults(%@name{} = config) do
     %@name{
       queue: config.queue || "",
       queue_opts: config.queue_opts || [],

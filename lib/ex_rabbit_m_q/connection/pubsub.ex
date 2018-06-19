@@ -28,13 +28,8 @@ defmodule ExRabbitMQ.Connection.PubSub do
   using the `ExRabbitMQ.Connection.PubSub.publish/2`.
   """
   @spec subscribe(tid :: tid, connection_config :: Config.t(), pid :: pid) :: boolean
-  def subscribe(tid, %{max_channels: max_channels} = _connection_config, pid) do
-    if size(tid) >= max_channels do
-      false
-    else
-      :ets.insert_new(tid, {pid})
-      true
-    end
+  def subscribe(tid, _connection_config, pid) do
+    :ets.insert_new(tid, {pid})
   end
 
   @doc """

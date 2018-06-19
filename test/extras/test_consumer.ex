@@ -26,12 +26,18 @@ defmodule TestConsumer do
           queue_config: queue_config
         } = state
       ) do
-    new_state =
+    {message, new_state} =
       connection_config
       |> xrmq_init(queue_config, state)
-      |> xrmq_extract_state()
+      |> case do
+        {:ok, _} = result ->
+          {{:connection_open, XRMQState.get_connection_pid()}, xrmq_extract_state(result)}
 
-    send(tester_pid, {:connection_open, XRMQState.get_connection_pid()})
+        {:error, reason, _} ->
+          {{:error, reason}, state}
+      end
+
+    send(tester_pid, message)
 
     send(tester_pid, {:consumer_state, new_state})
 

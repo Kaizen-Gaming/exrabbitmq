@@ -1,15 +1,14 @@
 defmodule ExRabbitMQTest do
   use ExUnit.Case, async: false
 
-  alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
-  alias ExRabbitMQ.Connection
-  alias ExRabbitMQ.Connection.Group
+  alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
 
   @defaults %{
-    connection_config: TestConfig.connection_config(),
+    connection_config: :test_a,
     queue_config: TestConfig.queue_config(),
     test_message: "ExRabbitMQ test",
-    tester_pid: nil
+    tester_pid: nil,
+    error_flag: false
   }
 
   setup_all do
@@ -17,7 +16,7 @@ defmodule ExRabbitMQTest do
     # first we start the connection supervisor
     # it holds the template for the GenServer wrapping connections to RabbitMQ
     connection_sup =
-      case ExRabbitMQ.Connection.Supervisor.start_link([]) do
+      case PoolSupervisor.start_link([]) do
         {:ok, pid} -> pid
         {:error, {:already_started, pid}} -> pid
       end
@@ -25,60 +24,63 @@ defmodule ExRabbitMQTest do
     on_exit(fn -> Process.exit(connection_sup, :kill) end)
   end
 
-  test "publishing a message and then consuming it with a re-usable connection" do
-    consumers = create(10, :consumer)
-    producers = create(10, :producer)
+  @tag :one
+  test "producers publish messages and producers consume them, using different connections" do
 
-    [consumers_connection_pid] = consumers |> Map.get(:connection_pids) |> Enum.uniq()
-    [producers_connection_pid] = producers |> Map.get(:connection_pids) |> Enum.uniq()
+    connection_config = :test_different_connections
 
-    # all the producer and the consumers  must have reused the same connection
-    # when this connection is used for the maximum of channels,
-    # a new connection will be used for the next consumer/producer that needs one
-    assert consumers_connection_pid === producers_connection_pid
+    consumers = create(10, :consumer, %{connection_config: connection_config})
+    producers = create(10, :producer, %{connection_config: connection_config})
+
+    consumers |> Map.get(:connection_pids)
+    producers |> Map.get(:connection_pids)
+
+    number_of_different_connections = get_unique_connection_size(consumers, producers)
+
+    # all the producer and the consumers  must have used different connections
+    assert(number_of_different_connections == 20)
 
     # we stop everything
     consumers |> Map.get(:pids) |> Enum.each(&TestConsumer.stop(&1))
     producers |> Map.get(:pids) |> Enum.each(&TestProducer.stop(&1))
-    Group.get_members() |> Enum.each(&Connection.close(&1))
 
     # we make sure that everything has stopped as required before we exit
     consumers |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
-    consumers |> Map.get(:connection_monitors) |> Enum.each(&TestHelper.assert_stop(&1))
     producers |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
-    producers |> Map.get(:connection_monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+
+    PoolSupervisor.stop_pools()
+
   end
 
+  @tag :two
   test "max channels per connection" do
-    connection_config = %ConnectionConfig{TestConfig.connection_config() | max_channels: 1}
 
-    %{
-      monitors: [consumer_monitor],
-      pids: [consumer],
-      connection_pids: [consumer_connection_pid],
-      connection_monitors: [consumer_connection_monitor]
-    } = create(1, :consumer, %{connection_config: connection_config})
+    connection_config = :test_max_channels
 
-    %{
-      monitors: [producer_monitor],
-      pids: [producer],
-      connection_pids: [producer_connection_pid],
-      connection_monitors: [producer_connection_monitor]
-    } = create(1, :producer, %{connection_config: connection_config})
+    consumers_1 = create(2, :consumer, %{connection_config: connection_config})
+    number_of_different_connections = get_unique_connection_size(consumers_1, %{})
 
-    assert(consumer_connection_pid !== producer_connection_pid)
+    assert(number_of_different_connections == 2)
+
+    producer_1 = create(1, :producer, %{connection_config: connection_config})
+    number_of_different_connections = get_unique_connection_size(consumers_1, producer_1)
+    assert(number_of_different_connections == 3)
+
+    # no available connection
+    consumer_2 = create(1, :consumer, %{connection_config: connection_config, error_flag: true})
+    assert(consumer_2 |> Map.get(:connection_pids) == [nil])
 
     # we stop everything
-    TestConsumer.stop(consumer)
-    TestProducer.stop(producer)
-    Connection.close(consumer_connection_pid)
-    Connection.close(producer_connection_pid)
+    consumers_1 |> Map.get(:pids) |> Enum.each(&TestConsumer.stop(&1))
+    producer_1 |> Map.get(:pids) |> Enum.each(&TestProducer.stop(&1))
+    consumer_2 |> Map.get(:pids) |> Enum.each(&TestConsumer.stop(&1))
 
-    # we make sure that everything has stopped as required before we exit
-    TestHelper.assert_stop(consumer_monitor)
-    TestHelper.assert_stop(consumer_connection_monitor)
-    TestHelper.assert_stop(producer_monitor)
-    TestHelper.assert_stop(producer_connection_monitor)
+    # # we make sure that everything has stopped as required before we exit
+    consumers_1 |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+    producer_1 |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+    consumer_2 |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
+
+    PoolSupervisor.stop_pools()
   end
 
   defp create(number, producer_or_consumer, opts \\ @defaults) do
@@ -103,5 +105,13 @@ defmodule ExRabbitMQTest do
       |> Map.update!(:monitors, &[monitor | &1])
       |> Map.update!(:connection_monitors, &[connection_monitor | &1])
     end)
+  end
+
+  defp get_unique_connection_size(map1, map2) do
+      map1
+      |> Map.get(:connection_pids)
+      |> Enum.concat(map2 |> Map.get(:connection_pids, []))
+      |> Enum.uniq()
+      |> length()
   end
 end
