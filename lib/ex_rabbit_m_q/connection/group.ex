@@ -28,4 +28,12 @@ defmodule ExRabbitMQ.Connection.Group do
       pids -> pids
     end
   end
+
+  @doc """
+  Makes the process Pid leave the group Name. If the process is not a member of the group, ok is returned.
+  """
+  @spec leave(pid :: pid) :: :ok | {:error, {:no_such_group, term}}
+  def leave(pid) do
+    :pg2.leave(@name, pid)
+  end
 end

@@ -23,14 +23,18 @@ defmodule ExRabbitMQ.Connection.Config do
     # the virtual host to connect to (optional, default: /)
     vhost: "/",
 
-    # the connection's heartbeat RabbitMQ in milliseconds (optional, default: 1000)
-    heartbeat: 1000,
+    # the connection's heartbeat RabbitMQ in seconds (optional, default: 20)
+    heartbeat: 20,
 
-    # the delay after which a connection wil be re-attempted after having been 
+    # the delay after which a connection wil be re-attempted after having been
     # dropped (optional, default: 2000)
     reconnect_after: 2000,
+
+    # the maximum channels per connection (optional, default: 65535)
+    max_channels: 65535,
   ```
   """
+  require Logger
 
   @name __MODULE__
 
@@ -41,10 +45,20 @@ defmodule ExRabbitMQ.Connection.Config do
           port: pos_integer,
           vhost: String.t(),
           heartbeat: pos_integer,
-          reconnect_after: pos_integer
+          reconnect_after: pos_integer,
+          max_channels: pos_integer
         }
 
-  defstruct [:username, :password, :host, :port, :vhost, :heartbeat, :reconnect_after]
+  defstruct [
+    :username,
+    :password,
+    :host,
+    :port,
+    :vhost,
+    :heartbeat,
+    :reconnect_after,
+    :max_channels
+  ]
 
   @doc """
   Returns a part of the `app` configuration section, specified with the
@@ -62,7 +76,8 @@ defmodule ExRabbitMQ.Connection.Config do
       port: config[:port],
       vhost: config[:vhost],
       heartbeat: config[:heartbeat],
-      reconnect_after: config[:reconnect_after]
+      reconnect_after: config[:reconnect_after],
+      max_channels: config[:max_channels]
     }
   end
 
@@ -77,8 +92,23 @@ defmodule ExRabbitMQ.Connection.Config do
       host: config.host,
       port: config.port || 5672,
       vhost: config.vhost || "/",
-      heartbeat: config.heartbeat || 1000,
-      reconnect_after: config.reconnect_after || 2000
+      heartbeat: config.heartbeat || 20,
+      reconnect_after: config.reconnect_after || 2000,
+      max_channels: config.max_channels || 65535
     }
+  end
+
+  def validate_connection_config(%@name{} = config) do
+    {:ok, max_channels_validation(config)}
+  end
+
+  defp max_channels_validation(%@name{max_channels: max_channels} = config)
+       when max_channels >= 1 and max_channels <= 65_535 do
+    config
+  end
+
+  defp max_channels_validation(%@name{} = config) do
+    Logger.warn("The maximum number of connections per channel is out of range 1 to 65535.")
+    %@name{config | max_channels: 65_535}
   end
 end

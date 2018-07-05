@@ -6,6 +6,7 @@ defmodule ExRabbitMQ.Mixfile do
       app: :exrabbitmq,
       version: "3.0.0-pre.2",
       elixir: "~> 1.6",
+      elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps()
@@ -13,7 +14,13 @@ defmodule ExRabbitMQ.Mixfile do
     |> Keyword.merge(package())
   end
 
-  def application do
+  defp elixirc_paths(:test), do: ["lib", "test/extras"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  def application, do: do_application(Mix.env())
+
+  defp do_application(:test), do: []
+  defp do_application(_) do
     [
       extra_applications: [:logger]
     ]
