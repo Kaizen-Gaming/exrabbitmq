@@ -263,50 +263,15 @@ defmodule ExRabbitMQ.Consumer do
 
       def xrmq_init(connection_config_spec, queue_config_spec, start_consuming \\ true, state)
 
-      def xrmq_init(connection_key, queue_key, start_consuming, state)
-          when is_atom(connection_key) and is_atom(queue_key) do
-        connection_config = XRMQConnectionConfig.from_env(connection_key)
-        queue_config = XRMQQueueConfig.from_env(queue_key)
+      def xrmq_init(connection_config, queue_config, start_consuming, state) do
+        connection_config = XRMQConnectionConfig.get(connection_config)
+        queue_config = XRMQQueueConfig.get(queue_config)
 
-        xrmq_init(connection_config, queue_config, start_consuming, state)
-      end
-
-      def xrmq_init(connection_key, %XRMQQueueConfig{} = queue_config, start_consuming, state)
-          when is_atom(connection_key) do
-        connection_config = XRMQConnectionConfig.from_env(connection_key)
-
-        xrmq_init(connection_config, queue_config, start_consuming, state)
-      end
-
-      def xrmq_init(
-            %XRMQConnectionConfig{} = connection_config,
-            queue_key,
-            start_consuming,
-            state
-          )
-          when is_atom(queue_key) do
-        queue_config = XRMQQueueConfig.from_env(queue_key)
-
-        xrmq_init(connection_config, queue_config, start_consuming, state)
-      end
-
-      def xrmq_init(
-            %XRMQConnectionConfig{} = connection_config,
-            %XRMQQueueConfig{} = queue_config,
-            start_consuming,
-            state
-          ) do
-        queue_config = XRMQQueueConfig.merge_defaults(queue_config)
-
-        connection_config_result =
-          connection_config
-          |> XRMQConnectionConfig.merge_defaults()
-          |> XRMQConnectionConfig.validate_connection_config()
-
-        with {:ok, new_connection_config} <- connection_config_result,
-              :ok <- xrmq_connection_setup(new_connection_config) do
+        with :ok <- xrmq_connection_setup(connection_config) do
           XRMQState.set_queue_config(queue_config)
           xrmq_open_channel_consume(state, start_consuming)
+        else
+          {:error, reason} -> {:error, reason, state}
         end
       end
 

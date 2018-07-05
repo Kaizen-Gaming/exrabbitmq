@@ -129,22 +129,13 @@ defmodule ExRabbitMQ.Producer do
 
       unquote(inner_ast)
 
-      def xrmq_init(connection_key, state)
-          when is_atom(connection_key) do
-        connection_config = XRMQConnectionConfig.from_env(connection_key)
+      def xrmq_init(connection_config, state) do
+        connection_config = XRMQConnectionConfig.get(connection_config)
 
-        xrmq_init(connection_config, state)
-      end
-
-      def xrmq_init(%XRMQConnectionConfig{} = connection_config, state) do
-        connection_config_result =
-          connection_config
-          |> XRMQConnectionConfig.merge_defaults()
-          |> XRMQConnectionConfig.validate_connection_config()
-
-        with {:ok, new_connection_config} <- connection_config_result,
-              :ok <- xrmq_connection_setup(new_connection_config) do
+        with :ok <- xrmq_connection_setup(connection_config) do
           xrmq_open_channel(state)
+        else
+          {:error, reason} -> {:error, reason, state}
         end
       end
 

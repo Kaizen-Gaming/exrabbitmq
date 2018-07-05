@@ -18,7 +18,7 @@ defmodule TestHelper do
     assert_receive({:DOWN, ^ref, :process, _pid, _reason}, 500)
   end
 
-  defp connection(pid, consumer_or_producer) do
+  defp connection(pid, consumer_or_producer, false) do
     # we monitor the producer/consumer so that we can wait for it to exit
     monitor = Process.monitor(pid)
 
@@ -28,7 +28,6 @@ defmodule TestHelper do
       500,
       "failed to open a connection for the #{consumer_or_producer}"
     )
-
     # we monitor the producer's/consumer's connection GenServer wrapper so that we can wait for it to exit
     connection_monitor = Process.monitor(connection_pid)
 
@@ -43,8 +42,23 @@ defmodule TestHelper do
     ]
   end
 
-  defp producer(pid, %{test_message: test_message} = _opts) do
-    setup_info = connection(pid, :producer)
+  defp connection(pid, _consumer_or_producer, true) do
+    # we monitor the producer/consumer so that we can wait for it to exit
+    monitor = Process.monitor(pid)
+
+    # the producer/consumer tells us that the connection hasn't been opened
+    assert_receive({:error, :no_available_connection})
+
+    [
+      pid: pid,
+      connection_pid: nil,
+      monitor: monitor,
+      connection_monitor: nil
+    ]
+  end
+
+  defp producer(pid, %{test_message: test_message, error_flag: error_flag} = _opts) do
+    setup_info = connection(pid, :producer, error_flag)
 
     # is the producers's channel properly set up?
     assert_receive(
@@ -66,16 +80,22 @@ defmodule TestHelper do
     setup_info
   end
 
-  defp consumer(pid, %{queue_config: %{queue: queue}} = _opts) do
-    setup_info = connection(pid, :consumer)
+  defp consumer(pid, %{queue_config: %{queue: queue}, error_flag: error_flag} = _opts) do
+    setup_info = connection(pid, :consumer, error_flag)
 
     # are the consumer's channel and queue properly set up?
-    assert_receive(
-      {:consumer_state,
-       %{consumer_channel_setup_ok: true, consumer_queue_setup_ok: {:ok, ^queue}}},
-      500,
-      "failed to properly setup the consumer's channel and/or queue"
-    )
+    case error_flag do
+      true ->
+        nil
+
+      false ->
+        assert_receive(
+          {:consumer_state,
+           %{consumer_channel_setup_ok: true, consumer_queue_setup_ok: {:ok, ^queue}}},
+          500,
+          "failed to properly setup the consumer's channel and/or queue"
+        )
+    end
 
     setup_info
   end

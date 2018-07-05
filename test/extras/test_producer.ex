@@ -30,16 +30,21 @@ defmodule TestProducer do
           test_message: test_message
         } = state
       ) do
-    new_state =
+    {message, new_state} =
       connection_config
       |> xrmq_init(state)
-      |> xrmq_extract_state()
+      |> case do
+        {:ok, _} = result ->
+          GenServer.cast(self(), {:publish, test_message})
+          {{:connection_open, XRMQState.get_connection_pid()}, xrmq_extract_state(result)}
 
-    send(tester_pid, {:connection_open, XRMQState.get_connection_pid()})
+        {:error, reason, _} ->
+          {{:error, reason}, state}
+      end
+
+    send(tester_pid, message)
 
     send(tester_pid, {:producer_state, new_state})
-
-    GenServer.cast(self(), {:publish, test_message})
 
     {:noreply, new_state}
   end
