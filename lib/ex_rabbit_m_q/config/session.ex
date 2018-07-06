@@ -1,4 +1,4 @@
-defmodule ExRabbitMQ.Consumer.QueueConfig do
+defmodule ExRabbitMQ.Config.Session do
   @moduledoc """
   A structure holding the necessary information about a queue that is to be consumed.
 
@@ -6,7 +6,7 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
 
   ```elixir
   # :queue is this queue's configuration name
-  config :exrabbitmq, :my_queue_config,
+  config :exrabbitmq, :my_session_config,
 
     # name of the queue from which we wish to consume (optional, default: "")
     queue: "my_queue",
@@ -55,31 +55,31 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
     ]
   ```
   """
-
   @name __MODULE__
 
   @type t :: %__MODULE__{
           queue: String.t(),
-          queue_opts: keyword,
-          exchange: String.t() | nil,
-          exchange_opts: keyword,
-          bind_opts: keyword,
+          consume_opts: keyword,
           qos_opts: keyword,
-          consume_opts: keyword
+          declarations: list
         }
 
-  defstruct [:queue, :queue_opts, :exchange, :exchange_opts, :bind_opts, :qos_opts, :consume_opts]
+  defstruct [:queue, :consume_opts, :qos_opts, :declarations]
+
+  alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
+  alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
+  alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
 
   @doc """
   Returns a part of the `app` configuration section, specified with the
-  `key` argument as a `ExRabbitMQ.Consumer.QueueConfig` struct.
+  `key` argument as a `ExRabbitMQ.Config.Session` struct.
   If the `app` argument is omitted, it defaults to `:exrabbitmq`.
   """
-  @spec get(app :: atom, queue_config :: atom | t()) :: t()
-  def get(app \\ :exrabbitmq, queue_config) do
-    case queue_config do
-      queue_config when is_atom(queue_config) -> from_env(app, queue_config)
-      _ -> queue_config
+  @spec get(app :: atom, session_config :: atom | t()) :: t()
+  def get(app \\ :exrabbitmq, session_config) do
+    case session_config do
+      session_config when is_atom(session_config) -> from_env(app, session_config)
+      _ -> session_config
     end
     |> merge_defaults()
   end
@@ -89,27 +89,41 @@ defmodule ExRabbitMQ.Consumer.QueueConfig do
 
     %@name{
       queue: config[:queue],
-      queue_opts: config[:queue_opts],
       consume_opts: config[:consume_opts],
-      exchange: config[:exchange],
-      exchange_opts: config[:exchange_opts],
-      bind_opts: config[:bind_opts],
-      qos_opts: config[:qos_opts]
+      qos_opts: config[:qos_opts],
+      declarations: get_declarations(config[:declarations] || [])
     }
   end
 
+  defp get_declarations(declarations) do
+    declarations
+    |> Enum.map(fn
+      {:exchange, config} -> {:exchange, XRMQExchangeConfig.get(config)}
+      {:queue, config} -> {:queue, XRMQQueueConfig.get(config)}
+      declaration -> raise ArgumentError, "invalid declaration #{inspect(declaration)}"
+    end)
+  end
+
   @doc """
-  Merges an existing `ExRabbitMQ.Consumer.QueueConfig` struct the default values when these are `nil`.
+  Merges an existing `ExRabbitMQ.Config.Session` struct the default values when these are `nil`.
   """
   defp merge_defaults(%@name{} = config) do
     %@name{
       queue: config.queue || "",
-      queue_opts: config.queue_opts || [],
       consume_opts: config.consume_opts || [],
-      exchange: config.exchange || nil,
-      exchange_opts: config.exchange_opts || [],
-      bind_opts: config.bind_opts || [],
-      qos_opts: config.qos_opts || []
+      qos_opts: config.qos_opts || [],
+      declarations: get_declarations(config.declarations || [])
     }
+  end
+
+  def validate_bindings(%{bindings: bindings} = config) do
+    bindings
+    |> Enum.reduce_while(config, fn
+      binding, %XRMQBindConfig{exchange: nil} ->
+        raise ArgumentError, "invalid source exchange: #{inspect(binding)}"
+
+      _, _ ->
+        {:cont, config}
+    end)
   end
 end

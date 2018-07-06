@@ -14,7 +14,8 @@ defmodule ExRabbitMQ.Connection do
 
   @name __MODULE__
 
-  alias ExRabbitMQ.Connection.{Config, PubSub}
+  alias ExRabbitMQ.Connection.PubSub
+  alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
   alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
   alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
 
@@ -22,13 +23,13 @@ defmodule ExRabbitMQ.Connection do
 
   require Logger
 
-  defstruct [:connection, :connection_pid, :ets_consumers, config: %Config{}, stale?: false]
+  defstruct [:connection, :connection_pid, :ets_consumers, config: %ConnectionConfig{}, stale?: false]
 
   @doc """
   Starts a new `ExRabbitMQ.Connection` process and links it with the calling one.
   """
-  @spec start_link(connection_config :: Config.t()) :: GenServer.on_start()
-  def start_link(%Config{} = connection_config) do
+  @spec start_link(connection_config :: ConnectionConfig.t()) :: GenServer.on_start()
+  def start_link(%ConnectionConfig{} = connection_config) do
     GenServer.start_link(@name, connection_config)
   end
 
@@ -72,10 +73,10 @@ defmodule ExRabbitMQ.Connection do
 
   If not found then a new `ExRabbitMQ.Connection` will be started and returned.
 
-  The `connection_config` is the `ExRabbitMQ.Connection.Config` that the `ExRabbitMQ.Connection` has to be using in order to allow
+  The `connection_config` is the `ExRabbitMQ.Config.Connection` that the `ExRabbitMQ.Connection` has to be using in order to allow
   the subscription.
   """
-  @spec get_subscribe(connection_config :: Config.t()) :: {:ok, pid} | {:error, atom()}
+  @spec get_subscribe(connection_config :: ConnectionConfig.t()) :: {:ok, pid} | {:error, atom()}
   def get_subscribe(connection_config) do
     case PoolSupervisor.start_child(connection_config) do
       {:error, {:already_started, pool_pid}} -> subscribe(pool_pid, connection_config)

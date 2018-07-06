@@ -4,12 +4,12 @@ defmodule ExRabbitMQ.State do
   `ExRabbitMQ.Consumer` or `ExRabbitMQ.Producer` process in its process dictionary.
   """
 
-  alias ExRabbitMQ.Connection.Config, as: ConnectionConfig
-  alias ExRabbitMQ.Consumer.QueueConfig
+  alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
+  alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
   alias ExRabbitMQ.Constants
 
   @doc """
-  Get the `ExRabbitMQ.Connection.Config` struct from the process dictionary.
+  Get the `ExRabbitMQ.Config.Connection` struct from the process dictionary.
   """
   @spec get_connection_config() :: ConnectionConfig.t() | nil
   def get_connection_config do
@@ -17,7 +17,7 @@ defmodule ExRabbitMQ.State do
   end
 
   @doc """
-  Set the `ExRabbitMQ.Connection.Config` struct in the process dictionary.
+  Set the `ExRabbitMQ.Config.Connection` struct in the process dictionary.
   """
   @spec set_connection_config(config :: ConnectionConfig.t() | nil) :: term | nil
   def set_connection_config(config) do
@@ -75,18 +75,18 @@ defmodule ExRabbitMQ.State do
   end
 
   @doc """
-  Get the `ExRabbitMQ.Consumer.QueueConfig` struct from the process dictionary.
+  Get the `ExRabbitMQ.Config.Session` struct from the process dictionary.
   """
-  @spec get_queue_config() :: QueueConfig.t() | nil
-  def get_queue_config do
-    Process.get(Constants.queue_config_key())
+  @spec get_session_config() :: XRMQSessionConfig.t() | nil
+  def get_session_config do
+    Process.get(Constants.session_config_key())
   end
 
   @doc """
-  Set the `ExRabbitMQ.Consumer.QueueConfig` struct in the process dictionary.
+  Set the `ExRabbitMQ.Config.Session` struct in the process dictionary.
   """
-  @spec set_queue_config(config :: QueueConfig.t()) :: term | nil
-  def set_queue_config(config) do
-    Process.put(Constants.queue_config_key(), config)
+  @spec set_session_config(config :: XRMQSessionConfig.t()) :: term | nil
+  def set_session_config(config) do
+    Process.put(Constants.session_config_key(), config)
   end
 end

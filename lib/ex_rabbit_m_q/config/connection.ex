@@ -1,4 +1,4 @@
-defmodule ExRabbitMQ.Connection.Config do
+defmodule ExRabbitMQ.Config.Connection do
   @moduledoc """
   A structure holding the necessary information about a connection to a RabbitMQ node.
 
@@ -36,7 +36,7 @@ defmodule ExRabbitMQ.Connection.Config do
   """
   require Logger
 
-  alias ExRabbitMQ.Connection.Pool.PoolConfig
+  alias ExRabbitMQ.Config.Pool, as: PoolConfig
 
   @name __MODULE__
 
@@ -88,7 +88,7 @@ defmodule ExRabbitMQ.Connection.Config do
 
   @doc """
   Returns a part of the `app` configuration section, specified with the
-  `key` argument as a `ExRabbitMQ.Connection.Config` struct.
+  `key` argument as a `ExRabbitMQ.Config.Connection` struct.
   If the `app` argument is omitted, it defaults to `:exrabbitmq`.
   """
   @spec from_env(app :: atom, key :: atom | module) :: t()
@@ -104,13 +104,13 @@ defmodule ExRabbitMQ.Connection.Config do
       heartbeat: config[:heartbeat],
       reconnect_after: config[:reconnect_after],
       max_channels: config[:max_channels],
-      pool: PoolConfig.get(config[:pool]),
+      pool: PoolConfig.get(config[:pool] || []),
       cleanup_after: config[:cleanup_after]
     }
   end
 
   @doc """
-  Merges an existing `ExRabbitMQ.Connection.Config` struct the default values when these are `nil`.
+  Merges an existing `ExRabbitMQ.Config.Connection` struct the default values when these are `nil`.
   """
   defp merge_defaults(%@name{} = config) do
     %@name{
@@ -122,7 +122,7 @@ defmodule ExRabbitMQ.Connection.Config do
       heartbeat: config.heartbeat || 20,
       reconnect_after: config.reconnect_after || 2_000,
       max_channels: config.max_channels || 65_535,
-      pool: config.pool,
+      pool: PoolConfig.get(config.pool || []),
       cleanup_after: config.cleanup_after || 5_000
     }
   end

@@ -5,11 +5,11 @@ defmodule ExRabbitMQ.AST.Common do
 
   @type connection ::
           atom
-          | ExRabbitMQ.Connection.Config.t()
+          | ExRabbitMQ.Config.Connection.t()
 
   @type queue ::
           atom
-          | ExRabbitMQ.Consumer.QueueConfig.t()
+          | ExRabbitMQ.Config.Session.t()
 
   @type result ::
           {:ok, state :: term}
@@ -18,6 +18,12 @@ defmodule ExRabbitMQ.AST.Common do
   @type basic_publish_result ::
           :ok
           | {:error, reason :: :blocked | :closing | :no_channel}
+
+  @callback xrmq_session_setup(
+              channel :: %AMQP.Channel{},
+              session_config :: atom() | ExRabbitMQ.Config.Session.t(),
+              state :: term
+            ) :: C.result()
 
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.
@@ -34,6 +40,10 @@ defmodule ExRabbitMQ.AST.Common do
       alias ExRabbitMQ.Connection, as: XRMQConnection
       alias ExRabbitMQ.Constants, as: XRMQConstants
       alias ExRabbitMQ.State, as: XRMQState
+      alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
+      alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
+      alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
+      alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
 
       def xrmq_channel_setup(_channel, state) do
         {:ok, state}
@@ -68,7 +78,7 @@ defmodule ExRabbitMQ.AST.Common do
       def xrmq_extract_state({:ok, state}), do: state
       def xrmq_extract_state({:error, _, state}), do: state
 
-      @deprecated "Use ExRabbitMQ.Connection.Config.from_env/2 or ExRabbitMQ.Consumer.QueueConfig.from_env/2 instead"
+      @deprecated "Use ExRabbitMQ.Config.Connection.from_env/2 or ExRabbitMQ.Config.Session.from_env/2 instead"
       def xrmq_get_env_config(key) do
         Application.get_env(:exrabbitmq, key)
       end
@@ -126,7 +136,80 @@ defmodule ExRabbitMQ.AST.Common do
         end
       end
 
-      defoverridable xrmq_channel_setup: 2, xrmq_channel_open: 2
+      def xrmq_session_setup(nil, _session_config, _state), do: {:error, :nil_channel}
+      def xrmq_session_setup(_channel, nil, _state), do: {:error, :nil_session_config}
+
+      def xrmq_session_setup(channel, session_config, state) do
+        session_config.declarations
+        |> Enum.reduce_while({:ok, state}, fn declaration, acc ->
+          case xrmq_declare(channel, declaration) do
+            {:ok, _} -> {:cont, acc}
+            error -> {:halt, error}
+          end
+        end)
+      end
+
+      defp xrmq_declare(channel, {:queue, queue_config}) do
+        with {:ok, %{queue: queue} = queue_info} <- xrmq_queue_declare(channel, queue_config),
+             :ok <- xrmq_queue_bindings(queue, channel, queue_config) do
+          {:ok, queue_info}
+        end
+      end
+
+      defp xrmq_declare(channel, {:exchange, exchange_config}) do
+        with :ok <- xrmq_exchange_declare(channel, exchange_config),
+             :ok <- xrmq_exchange_bindings(channel, exchange_config) do
+          {:ok, nil}
+        end
+      end
+
+      defp xrmq_exchange_declare(channel, %XRMQExchangeConfig{name: name, type: type, opts: opts})
+           when is_binary(name) do
+        AMQP.Exchange.declare(channel, name, type, opts)
+      end
+
+      defp xrmq_exchange_bindings(channel, %XRMQExchangeConfig{
+             name: destination,
+             bindings: bindings
+           }) do
+        bindings
+        |> Enum.reduce_while(:ok, fn binding, acc ->
+          case xrmq_exchange_bind(channel, destination, binding) do
+            :ok -> {:cont, acc}
+            error -> {:halt, error}
+          end
+        end)
+      end
+
+      defp xrmq_exchange_bind(channel, destination, %XRMQBindConfig{exchange: source, opts: opts}) do
+        AMQP.Exchange.bind(channel, destination, source, opts)
+      end
+
+      defp xrmq_queue_declare(channel, %XRMQQueueConfig{name: name, opts: opts} = a)
+           when is_binary(name) do
+        session_config = XRMQState.get_session_config()
+
+        with queue = {:ok, %{queue: new_name}} <- AMQP.Queue.declare(channel, name, opts) do
+          XRMQState.set_session_config(%XRMQSessionConfig{session_config | queue: new_name})
+          queue
+        end
+      end
+
+      defp xrmq_queue_bindings(queue, channel, %XRMQQueueConfig{bindings: bindings}) do
+        bindings
+        |> Enum.reduce_while(:ok, fn binding, acc ->
+          case xrmq_queue_bind(queue, channel, binding) do
+            :ok -> {:cont, acc}
+            error -> {:halt, error}
+          end
+        end)
+      end
+
+      defp xrmq_queue_bind(queue, channel, %XRMQBindConfig{exchange: exchange, opts: opts}) do
+        AMQP.Queue.bind(channel, queue, exchange, opts)
+      end
+
+      defoverridable xrmq_session_setup: 3, xrmq_channel_setup: 2, xrmq_channel_open: 2
     end
   end
 end

@@ -18,7 +18,7 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         new_state =
           state
-          |> xrmq_open_channel()
+          |> xrmq_open_channel_setup()
           |> xrmq_extract_state()
 
         {:noreply, new_state}
@@ -37,7 +37,7 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
 
             new_state =
               state
-              |> xrmq_open_channel()
+              |> xrmq_open_channel_setup()
               |> xrmq_extract_state()
 
             {:noreply, new_state}

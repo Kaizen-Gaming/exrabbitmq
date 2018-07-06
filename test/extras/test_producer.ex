@@ -55,9 +55,13 @@ defmodule TestProducer do
 
   def handle_cast(
         {:publish, test_message},
-        %{tester_pid: tester_pid, queue_config: queue_config} = state
+        %{tester_pid: tester_pid, session_config: session_config} = state
       ) do
-    publish_result = xrmq_basic_publish(test_message, "", queue_config.queue)
+    queue =
+      Application.get_env(:exrabbitmq, session_config)
+      |> Keyword.get(:queue)
+
+    publish_result = xrmq_basic_publish(test_message, "", queue)
     send(tester_pid, {:publish, publish_result})
 
     {:noreply, state}

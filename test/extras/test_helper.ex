@@ -80,8 +80,12 @@ defmodule TestHelper do
     setup_info
   end
 
-  defp consumer(pid, %{queue_config: %{queue: queue}, error_flag: error_flag} = _opts) do
+  defp consumer(pid, %{session_config: session_config, error_flag: error_flag} = _opts) do
     setup_info = connection(pid, :consumer, error_flag)
+
+    queue =
+      Application.get_env(:exrabbitmq, session_config)
+      |> Keyword.get(:queue)
 
     # are the consumer's channel and queue properly set up?
     case error_flag do

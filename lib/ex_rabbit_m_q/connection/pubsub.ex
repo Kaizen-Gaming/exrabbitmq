@@ -12,7 +12,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
 
   @type tid :: :ets.tid() | atom
 
-  alias ExRabbitMQ.Connection.Config
+  alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
 
   @doc """
   Creates a new private [ETS](http://erlang.org/doc/man/ets.html) table for keeping
@@ -27,7 +27,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
   Insert the process `pid` in the table `tid`, so that it receives messages send
   using the `ExRabbitMQ.Connection.PubSub.publish/2`.
   """
-  @spec subscribe(tid :: tid, connection_config :: Config.t(), pid :: pid) :: boolean
+  @spec subscribe(tid :: tid, connection_config :: ConnectionConfig.t(), pid :: pid) :: boolean
   def subscribe(tid, _connection_config, pid) do
     :ets.insert_new(tid, {pid})
   end

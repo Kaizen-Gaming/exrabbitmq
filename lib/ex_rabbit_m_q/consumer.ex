@@ -7,9 +7,9 @@ defmodule ExRabbitMQ.Consumer do
   It also provides hooks to allow the programmer to wrap the consumption of a message without having to directly
   access the AMPQ interfaces.
 
-  For a connection configuration example see `ExRabbitMQ.Connection.Config`.
+  For a connection configuration example see `ExRabbitMQ.Config.Connection`.
 
-  For a queue configuration example see `ExRabbitMQ.Consumer.QueueConfig`.
+  For a queue configuration example see `ExRabbitMQ.Config.Session`.
 
   #### Example usage for a consumer implementing a `GenServer`
 
@@ -26,7 +26,7 @@ defmodule ExRabbitMQ.Consumer do
 
     def init(state) do
       new_state =
-        xrmq_init(:my_connection_config, :my_queue_config, state)
+        xrmq_init(:my_connection_config, :my_session_config, state)
         |> xrmq_extract_state()
 
       {:ok, new_state}
@@ -83,13 +83,13 @@ defmodule ExRabbitMQ.Consumer do
 
   The function accepts the following arguments:
   * `connection` - The configuration information for the RabbitMQ connection.
-    It can either be a `ExRabbitMQ.Connection.Config` struct or an atom that will be used as the `key` for reading the
+    It can either be a `ExRabbitMQ.Config.Connection` struct or an atom that will be used as the `key` for reading the
     the `:exrabbitmq` configuration part from the enviroment.
-    For more information on how to configure the connection, check `ExRabbitMQ.Connection.Config`.
+    For more information on how to configure the connection, check `ExRabbitMQ.Config.Connection`.
   * `queue` - The configuration information for the RabbitMQ queue to consume.
-    It can either be a `ExRabbitMQ.Consumer.QueueConfig` struct or an atom that will be used as the `key` for reading the
+    It can either be a `ExRabbitMQ.Config.Session` struct or an atom that will be used as the `key` for reading the
     the `:exrabbitmq` configuration part from the enviroment.
-    For more information on how to configure the consuming queue, check `ExRabbitMQ.Connection.Config`.
+    For more information on how to configure the consuming queue, check `ExRabbitMQ.Config.Connection`.
   * `start_consuming` - When `true` then `c:xrmq_consume/1` is called automatically after the connection and channel has
     been established successfully. *Optional: Defaults to `true`.*
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
@@ -101,12 +101,17 @@ defmodule ExRabbitMQ.Consumer do
               state :: term
             ) :: C.result()
 
+  @doc false
+  @callback xrmq_open_channel_setup_consume(
+              state :: term | state :: term,
+              start_consuming :: boolean
+            ) :: {:ok, state :: term} | {:error, reason :: term, state :: term}
   @doc """
   Returns a part of the `:exrabbitmq` configuration section, specified with the `key` argument.
 
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
 
-  **Deprecated:** Use `ExRabbitMQ.Connection.Config.from_env/2` or `ExRabbitMQ.Consumer.QueueConfig.from_env/2` instead.
+  **Deprecated:** Use `ExRabbitMQ.Config.Connection.from_env/2` or `ExRabbitMQ.Config.Session.from_env/2` instead.
   """
   @callback xrmq_get_env_config(key :: atom) :: keyword
 
@@ -126,9 +131,9 @@ defmodule ExRabbitMQ.Consumer do
   This configuration is set in the wrapper process's dictionary.
   For the configuration format see the top section of `ExRabbitMQ.Consumer`.
 
-  **Deprecated:** Use `ExRabbitMQ.State.get_queue_config/0` instead.
+  **Deprecated:** Use `ExRabbitMQ.State.get_session_config/0` instead.
   """
-  @callback xrmq_get_queue_config() :: term
+  @callback xrmq_get_session_config() :: term
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened.
@@ -170,8 +175,6 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_queue_setup(channel :: %AMQP.Channel{}, queue :: String.t(), state :: term) ::
-              C.result()
 
   @doc """
   This callback is the only required callback (i.e., without any default implementation) and
@@ -256,98 +259,64 @@ defmodule ExRabbitMQ.Consumer do
 
       alias ExRabbitMQ.Constants, as: XRMQConstants
       alias ExRabbitMQ.State, as: XRMQState
-      alias ExRabbitMQ.Connection.Config, as: XRMQConnectionConfig
-      alias ExRabbitMQ.Consumer.QueueConfig, as: XRMQQueueConfig
+      alias ExRabbitMQ.Config.Connection, as: XRMQConnectionConfig
+      alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
 
       unquote(inner_ast)
 
-      def xrmq_init(connection_config_spec, queue_config_spec, start_consuming \\ true, state)
-
-      def xrmq_init(connection_config, queue_config, start_consuming, state) do
+      def xrmq_init(connection_config, session_config, start_consuming \\ true, state) do
         connection_config = XRMQConnectionConfig.get(connection_config)
-        queue_config = XRMQQueueConfig.get(queue_config)
+        session_config = XRMQSessionConfig.get(session_config)
 
         with :ok <- xrmq_connection_setup(connection_config) do
-          XRMQState.set_queue_config(queue_config)
-          xrmq_open_channel_consume(state, start_consuming)
+          XRMQState.set_session_config(session_config)
+          xrmq_open_channel_setup_consume(start_consuming, state)
         else
           {:error, reason} -> {:error, reason, state}
         end
       end
 
-      defp xrmq_open_channel_consume(state) do
-        xrmq_open_channel_consume(state, true)
+      def xrmq_open_channel_setup_consume(state) do
+        xrmq_open_channel_setup_consume(true, state)
       end
 
-      defp xrmq_open_channel_consume(state, true) do
-        with {:ok, state} <- xrmq_open_channel(state) do
-          xrmq_consume(state)
+      def xrmq_open_channel_setup_consume(start_consuming, state) do
+        with {:ok, state} <- xrmq_open_channel(state),
+             {channel, _} <- XRMQState.get_channel_info(),
+             session_config <- XRMQState.get_session_config(),
+             {:ok, state} <- xrmq_session_setup(channel, session_config, state),
+             {:ok, state} <- xrmq_qos_setup(channel, session_config.qos_opts, state),
+             {:start_consuming, true} <- {:start_consuming, start_consuming} do
+          xrmq_consume(channel, session_config.queue, session_config.consume_opts, state)
+        else
+          {:start_consuming, false} -> {:ok, state}
+          {:error, _reason, _state} = error -> error
+          {:error, reason} -> {:error, reason, state}
+          error -> {:error, error, state}
         end
-      end
-
-      defp xrmq_open_channel_consume(state, _) do
-        xrmq_open_channel(state)
       end
 
       def xrmq_consume(state) do
         {channel, _} = XRMQState.get_channel_info()
-        config = XRMQState.get_queue_config()
+        session_config = XRMQState.get_session_config()
 
-        if channel === nil or config === nil do
-          nil
-        else
-          with {:ok, queue} <- xrmq_queue_declare(channel, config),
-               {:ok, state} <- xrmq_queue_setup(channel, queue, state),
-               {:ok, _} <- AMQP.Basic.consume(channel, queue, nil, config.consume_opts) do
-            {:ok, state}
-          else
-            {:error, _reason, _state} = error -> error
-            {:error, reason} -> {:error, reason, state}
-            error -> {:error, error, state}
-          end
-        end
+        xrmq_consume(channel, session_config.queue, session_config.consume_opts, state)
       end
 
-      def xrmq_queue_setup(channel, queue, state) do
-        config = XRMQState.get_queue_config()
-
-        with :ok <- xrmq_qos_setup(channel, config),
-             :ok <- xrmq_exchange_declare(channel, config),
-             :ok <- xrmq_queue_bind(channel, queue, config) do
+      def xrmq_consume(channel, queue, consume_opts, state) do
+        with {:ok, _} <- AMQP.Basic.consume(channel, queue, nil, consume_opts) do
           {:ok, state}
         else
           {:error, reason} -> {:error, reason, state}
         end
       end
 
-      defp xrmq_qos_setup(_channel, %{qos_opts: []}) do
-        :ok
-      end
+      defp xrmq_qos_setup(_channel, [], state), do: {:ok, state}
 
-      defp xrmq_qos_setup(channel, %{qos_opts: opts}) do
-        AMQP.Basic.qos(channel, opts)
-      end
-
-      defp xrmq_queue_declare(channel, %{queue: queue, queue_opts: opts}) do
-        with {:ok, %{queue: queue}} <- AMQP.Queue.declare(channel, queue, opts) do
-          {:ok, queue}
+      defp xrmq_qos_setup(channel, opts, state) do
+        with :ok <- AMQP.Basic.qos(channel, opts) do
+          {:ok, state}
         end
-      end
-
-      defp xrmq_exchange_declare(_channel, %{exchange: nil}) do
-        :ok
-      end
-
-      defp xrmq_exchange_declare(channel, %{exchange: exchange, exchange_opts: opts}) do
-        AMQP.Exchange.declare(channel, exchange, opts[:type] || :direct, opts)
-      end
-
-      defp xrmq_queue_bind(_channel, _queue, %{exchange: nil}) do
-        :ok
-      end
-
-      defp xrmq_queue_bind(channel, queue, %{exchange: exchange, bind_opts: opts}) do
-        AMQP.Queue.bind(channel, queue, exchange, opts)
       end
 
       def xrmq_basic_ack(delivery_tag, state) do
@@ -386,15 +355,14 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
-      @deprecated "Use ExRabbitMQ.State.get_queue_config/0 instead"
-      def xrmq_get_queue_config do
-        XRMQState.get_queue_config()
+      @deprecated "Use ExRabbitMQ.State.get_session_config/0 instead"
+      def xrmq_get_session_config do
+        XRMQState.get_session_config()
       end
 
       unquote(common_ast)
 
-      defoverridable xrmq_queue_setup: 3,
-                     xrmq_basic_cancel: 2,
+      defoverridable xrmq_basic_cancel: 2,
                      xrmq_basic_ack: 2,
                      xrmq_basic_reject: 2,
                      xrmq_basic_reject: 3

@@ -23,17 +23,17 @@ defmodule TestConsumer do
         %{
           tester_pid: tester_pid,
           connection_config: connection_config,
-          queue_config: queue_config
+          session_config: session_config
         } = state
       ) do
     {message, new_state} =
       connection_config
-      |> xrmq_init(queue_config, state)
+      |> xrmq_init(session_config, state)
       |> case do
         {:ok, _} = result ->
           {{:connection_open, XRMQState.get_connection_pid()}, xrmq_extract_state(result)}
 
-        {:error, reason, _} ->
+        {:error, reason, state} ->
           {{:error, reason}, state}
       end
 
@@ -64,9 +64,9 @@ defmodule TestConsumer do
     {:ok, Map.put(state, :consumer_channel_setup_ok, true)}
   end
 
-  # optional override when there is a need to setup the queue and/or exchange just before the consume.
-  def xrmq_queue_setup(channel, queue, state) do
-    {:ok, state} = super(channel, queue, state)
-    {:ok, Map.put(state, :consumer_queue_setup_ok, {:ok, queue})}
+  # # optional override when there is a need to setup the queue and/or exchange just before the consume.
+  def xrmq_session_setup(channel, session_config, state) do
+    {:ok, state} = super(channel, session_config, state)
+    {:ok, Map.put(state, :consumer_queue_setup_ok, {:ok, session_config.queue})}
   end
 end

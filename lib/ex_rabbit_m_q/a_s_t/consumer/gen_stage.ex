@@ -28,7 +28,7 @@ defmodule ExRabbitMQ.AST.Consumer.GenStage do
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         new_state =
           state
-          |> xrmq_open_channel_consume()
+          |> xrmq_open_channel_setup_consume()
           |> xrmq_extract_state()
 
         {:noreply, [], new_state}
@@ -47,7 +47,7 @@ defmodule ExRabbitMQ.AST.Consumer.GenStage do
 
             new_state =
               state
-              |> xrmq_open_channel_consume()
+              |> xrmq_open_channel_setup_consume()
               |> xrmq_extract_state()
 
             {:noreply, [], new_state}

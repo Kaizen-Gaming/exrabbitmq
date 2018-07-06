@@ -5,14 +5,13 @@ defmodule ExRabbitMQTest do
 
   @defaults %{
     connection_config: :test_a,
-    queue_config: TestConfig.queue_config(),
+    session_config: :test_basic_session,
     test_message: "ExRabbitMQ test",
     tester_pid: nil,
     error_flag: false
   }
 
   setup_all do
-
     # first we start the connection supervisor
     # it holds the template for the GenServer wrapping connections to RabbitMQ
     connection_sup =
@@ -26,7 +25,6 @@ defmodule ExRabbitMQTest do
 
   @tag :one
   test "producers publish messages and producers consume them, using different connections" do
-
     connection_config = :test_different_connections
 
     consumers = create(10, :consumer, %{connection_config: connection_config})
@@ -49,12 +47,10 @@ defmodule ExRabbitMQTest do
     producers |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
 
     PoolSupervisor.stop_pools()
-
   end
 
   @tag :two
   test "max channels per connection" do
-
     connection_config = :test_max_channels
 
     consumers_1 = create(2, :consumer, %{connection_config: connection_config})
@@ -84,14 +80,14 @@ defmodule ExRabbitMQTest do
   end
 
   defp create(number, producer_or_consumer, opts \\ @defaults) do
-
     opts =
       @defaults
       |> Map.merge(opts)
       |> Map.put(:tester_pid, self())
 
     1..number
-    |> Enum.reduce(%{monitors: [], pids: [], connection_pids: [], connection_monitors: []}, fn _, acc ->
+    |> Enum.reduce(%{monitors: [], pids: [], connection_pids: [], connection_monitors: []}, fn _,
+                                                                                               acc ->
       [
         pid: pid,
         connection_pid: connection_pid,
@@ -108,10 +104,10 @@ defmodule ExRabbitMQTest do
   end
 
   defp get_unique_connection_size(map1, map2) do
-      map1
-      |> Map.get(:connection_pids)
-      |> Enum.concat(map2 |> Map.get(:connection_pids, []))
-      |> Enum.uniq()
-      |> length()
+    map1
+    |> Map.get(:connection_pids)
+    |> Enum.concat(map2 |> Map.get(:connection_pids, []))
+    |> Enum.uniq()
+    |> length()
   end
 end

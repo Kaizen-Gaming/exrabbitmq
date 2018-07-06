@@ -5,7 +5,7 @@ defmodule ExRabbitMQ.Producer do
   It also provides hooks to allow the programmer to publish a message without having to directly
   access the AMPQ interfaces.
 
-  For a connection configuration example see `ExRabbitMQ.Connection.Config`.
+  For a connection configuration example see `ExRabbitMQ.Config.Connection`.
 
   #### Example usage for a producer implementing a `GenServer`
 
@@ -58,9 +58,9 @@ defmodule ExRabbitMQ.Producer do
 
   The function accepts the following arguments:
   * `connection` - The configuration information for the RabbitMQ connection.
-    It can either be a `ExRabbitMQ.Connection.Config` struct or an atom that will be used as the `key` for reading the
+    It can either be a `ExRabbitMQ.Config.Connection` struct or an atom that will be used as the `key` for reading the
     the `:exrabbitmq` configuration part from the enviroment.
-    For more information on how to configure the connection, check `ExRabbitMQ.Connection.Config`.
+    For more information on how to configure the connection, check `ExRabbitMQ.Config.Connection`.
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
   @callback xrmq_init(connection :: C.connection(), state :: term) :: C.result()
@@ -71,7 +71,7 @@ defmodule ExRabbitMQ.Producer do
 
   For the configuration format see the top section of `ExRabbitMQ.Producer`.
 
-  **Deprecated:** Use `ExRabbitMQ.Connection.Config.from_env/2` instead.
+  **Deprecated:** Use `ExRabbitMQ.Config.Connection.from_env/2` instead.
   """
   @callback xrmq_get_env_config(key :: atom) :: keyword
 
@@ -125,17 +125,33 @@ defmodule ExRabbitMQ.Producer do
     quote location: :keep do
       require Logger
 
-      alias ExRabbitMQ.Connection.Config, as: XRMQConnectionConfig
+      alias ExRabbitMQ.Config.Connection, as: XRMQConnectionConfig
+      alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
 
       unquote(inner_ast)
 
-      def xrmq_init(connection_config, state) do
+      def xrmq_init(connection_config, session_config \\ nil, state) do
         connection_config = XRMQConnectionConfig.get(connection_config)
+        session_config = XRMQSessionConfig.get(session_config)
 
         with :ok <- xrmq_connection_setup(connection_config) do
-          xrmq_open_channel(state)
+          XRMQState.set_session_config(session_config)
+          xrmq_open_channel_setup(state)
         else
           {:error, reason} -> {:error, reason, state}
+        end
+      end
+
+      def xrmq_open_channel_setup(state) do
+        with {:ok, state} <- xrmq_open_channel(state) do
+          {channel, _} = XRMQState.get_channel_info()
+          session_config = XRMQState.get_session_config()
+
+          xrmq_session_setup(channel, session_config, state)
+        else
+          {:error, _reason, _state} = error -> error
+          {:error, reason} -> {:error, reason, state}
+          error -> {:error, error, state}
         end
       end
 
