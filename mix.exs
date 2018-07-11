@@ -15,11 +15,12 @@ defmodule ExRabbitMQ.Mixfile do
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/extras"]
-  defp elixirc_paths(_), do: ["lib", "test/extras"]
+  defp elixirc_paths(_), do: ["lib"]
 
   def application, do: do_application(Mix.env())
 
   defp do_application(:test), do: []
+
   defp do_application(_) do
     [
       extra_applications: [:logger, :poolboy]
@@ -28,12 +29,11 @@ defmodule ExRabbitMQ.Mixfile do
 
   defp deps do
     [
-      {:credo, "~> 0.9.3", runtime: false},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
-      {:ex_doc, "~> 0.18", runtime: false},
+      {:credo, "~> 0.10.0", runtime: false},
+      {:dialyxir, "~> 0.5.1", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.19.0", runtime: false},
       {:amqp, "~> 1.0"},
       {:poolboy, github: "StoiximanServices/poolboy", branch: "weighted_strategy"}
-
     ]
   end
 

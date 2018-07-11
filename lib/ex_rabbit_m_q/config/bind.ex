@@ -1,4 +1,6 @@
 defmodule ExRabbitMQ.Config.Bind do
+  @moduledoc false
+
   @name __MODULE__
 
   @type t :: %__MODULE__{
@@ -13,11 +15,8 @@ defmodule ExRabbitMQ.Config.Bind do
     bind_config
     |> Enum.map(
       &(case &1 do
-          &1 when is_list(&1) ->
-            from_env(&1)
-
-          _ ->
-            &1
+          &1 when is_list(&1) -> from_env(&1)
+          _ -> &1
         end
         |> merge_defaults()
         |> validate_name())

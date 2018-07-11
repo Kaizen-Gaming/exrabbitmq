@@ -1,30 +1,30 @@
 defmodule ExRabbitMQ.AST.Consumer.GenServer do
-  @moduledoc false
-  # @moduledoc """
-  # AST holding module for the consumer behaviour when the surrounding consumer is a GenServer.
-  # """
+  @moduledoc """
+  AST holding module for the consumer behaviour when the surrounding consumer is a GenServer.
+  """
 
   @doc """
   Produces part of the AST for the consumer behaviour when the consumer is a GenServer.
-
   It holds GenServer handle_info callbacks and a few default implementations.
-
   Specifically, it handles the basic_deliver and basic_cancel AMQP events.
-
   It also responds to connection and channel events, trying to keep a channel open when a connection is available.
   """
   def ast do
     quote location: :keep do
       alias ExRabbitMQ.State, as: XRMQState
+      use GenServer
 
+      @impl true
       def handle_info({:basic_deliver, payload, meta}, state) do
         xrmq_basic_deliver(payload, meta, state)
       end
 
+      @impl true
       def handle_info({:basic_cancel, cancellation_info}, state) do
         xrmq_basic_cancel(cancellation_info, state)
       end
 
+      @impl true
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         new_state =
           state
@@ -34,12 +34,14 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
         {:noreply, new_state}
       end
 
+      @impl true
       def handle_info({:xrmq_connection, {:closed, _}}, state) do
         # WE WILL CONTINUE HANDLING THIS EVENT WHEN WE HANDLE THE CHANNEL DOWN EVENT
 
         {:noreply, state}
       end
 
+      @impl true
       def handle_info({:DOWN, ref, :process, pid, reason}, state) do
         case XRMQState.get_channel_info() do
           {_, ^ref} ->

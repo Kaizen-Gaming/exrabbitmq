@@ -1,15 +1,18 @@
 defmodule TestProducer do
   @module __MODULE__
 
-  use GenServer
-  use ExRabbitMQ.Producer
+  use ExRabbitMQ.Producer, GenServer
+
+  def start_link(state) do
+    GenServer.start_link(@module, state)
+  end
 
   def publish(producer_pid, test_message) do
     GenServer.cast(producer_pid, {:publish, test_message})
   end
 
-  def start_link(state) do
-    GenServer.start_link(@module, state)
+  def stop(producer_pid) do
+    GenServer.cast(producer_pid, :stop)
   end
 
   def init(state) do
@@ -18,18 +21,13 @@ defmodule TestProducer do
     {:ok, state}
   end
 
-  def stop(producer_pid) do
-    GenServer.cast(producer_pid, :stop)
-  end
+  def handle_cast(:init, state) do
+    %{
+      tester_pid: tester_pid,
+      connection_config: connection_config,
+      test_message: test_message
+    } = state
 
-  def handle_cast(
-        :init,
-        %{
-          tester_pid: tester_pid,
-          connection_config: connection_config,
-          test_message: test_message
-        } = state
-      ) do
     {message, new_state} =
       connection_config
       |> xrmq_init(state)
@@ -53,10 +51,9 @@ defmodule TestProducer do
     {:stop, :normal, state}
   end
 
-  def handle_cast(
-        {:publish, test_message},
-        %{tester_pid: tester_pid, session_config: session_config} = state
-      ) do
+  def handle_cast({:publish, test_message}, state) do
+    %{tester_pid: tester_pid, session_config: session_config} = state
+
     queue =
       Application.get_env(:exrabbitmq, session_config)
       |> Keyword.get(:queue)

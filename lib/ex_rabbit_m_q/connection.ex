@@ -14,16 +14,22 @@ defmodule ExRabbitMQ.Connection do
 
   @name __MODULE__
 
-  alias ExRabbitMQ.Connection.PubSub
   alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
-  alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
   alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
+  alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
+  alias ExRabbitMQ.Connection.PubSub
 
   use GenServer, restart: :transient
 
   require Logger
 
-  defstruct [:connection, :connection_pid, :ets_consumers, config: %ConnectionConfig{}, stale?: false]
+  defstruct [
+    :connection,
+    :connection_pid,
+    :ets_consumers,
+    config: %ConnectionConfig{},
+    stale?: false
+  ]
 
   @doc """
   Starts a new `ExRabbitMQ.Connection` process and links it with the calling one.
@@ -31,17 +37,6 @@ defmodule ExRabbitMQ.Connection do
   @spec start_link(connection_config :: ConnectionConfig.t()) :: GenServer.on_start()
   def start_link(%ConnectionConfig{} = connection_config) do
     GenServer.start_link(@name, connection_config)
-  end
-
-  @doc false
-  def init(%{cleanup_after: cleanup_after} = config) do
-    Process.flag(:trap_exit, true)
-    ets_consumers = PubSub.new()
-
-    Process.send(self(), :connect, [])
-    schedule_cleanup(cleanup_after)
-
-    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
   end
 
   @doc """
@@ -76,7 +71,7 @@ defmodule ExRabbitMQ.Connection do
   The `connection_config` is the `ExRabbitMQ.Config.Connection` that the `ExRabbitMQ.Connection` has to be using in order to allow
   the subscription.
   """
-  @spec get_subscribe(connection_config :: ConnectionConfig.t()) :: {:ok, pid} | {:error, atom()}
+  @spec get_subscribe(connection_config :: ConnectionConfig.t()) :: {:ok, pid} | {:error, atom}
   def get_subscribe(connection_config) do
     case PoolSupervisor.start_child(connection_config) do
       {:error, {:already_started, pool_pid}} -> subscribe(pool_pid, connection_config)
@@ -98,31 +93,40 @@ defmodule ExRabbitMQ.Connection do
     GenServer.call(connection_pid, :get_weight)
   end
 
-  @doc false
+  @impl true
+  def init(%{cleanup_after: cleanup_after} = config) do
+    Process.flag(:trap_exit, true)
+    ets_consumers = PubSub.new()
+
+    Process.send(self(), :connect, [])
+    schedule_cleanup(cleanup_after)
+
+    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
+  end
+
+  @impl true
   def handle_call(:get, _from, state) do
     %{connection: connection} = state
+
     reply = if connection === nil, do: {:error, :nil_connection_pid}, else: {:ok, connection}
 
     {:reply, reply, state}
   end
 
-  @doc false
-  def handle_call(
-        {:subscribe, consumer_pid, connection_config},
-        _from,
-        %{ets_consumers: ets_consumers} = state
-      ) do
+  @impl true
+  def handle_call({:subscribe, consumer_pid, connection_config}, _from, state) do
+    %{ets_consumers: ets_consumers} = state
+
     PubSub.subscribe(ets_consumers, connection_config, consumer_pid)
     Process.monitor(consumer_pid)
+
     {:reply, true, %{state | stale?: false}}
   end
 
-  @doc false
-  def handle_call(
-        :get_weight,
-        _from,
-        %{ets_consumers: ets_consumers, config: %{max_channels: max_channels}} = state
-      ) do
+  @impl true
+  def handle_call(:get_weight, _from, state) do
+    %{ets_consumers: ets_consumers, config: %{max_channels: max_channels}} = state
+
     reply =
       case PubSub.size(ets_consumers) do
         connection_channels when connection_channels < max_channels -> connection_channels
@@ -132,7 +136,7 @@ defmodule ExRabbitMQ.Connection do
     {:reply, reply, state}
   end
 
-  @doc false
+  @impl true
   def handle_cast(:close, state) do
     %{ets_consumers: ets_consumers, connection: connection, connection_pid: connection_pid} =
       state
@@ -148,7 +152,7 @@ defmodule ExRabbitMQ.Connection do
     end
   end
 
-  @doc false
+  @impl true
   def handle_info(:connect, state) do
     Logger.debug("Connecting to RabbitMQ")
 
@@ -183,7 +187,7 @@ defmodule ExRabbitMQ.Connection do
     end
   end
 
-  @doc false
+  @impl true
   def handle_info({:EXIT, pid, _reason}, %{connection_pid: connection_pid} = state)
       when pid === connection_pid do
     Logger.error("Disconnected from RabbitMQ")
@@ -197,7 +201,6 @@ defmodule ExRabbitMQ.Connection do
     {:noreply, new_state}
   end
 
-  @doc false
   def handle_info({:DOWN, _ref, :process, consumer_pid, _reason}, state) do
     %{ets_consumers: ets_consumers} = state
 
@@ -206,8 +209,10 @@ defmodule ExRabbitMQ.Connection do
     {:noreply, state}
   end
 
-  @doc false
-  def handle_info(:cleanup, config: %{cleanup_after: cleanup_after} = state) do
+  @impl true
+  def handle_info(:cleanup, config: state) do
+    %{cleanup_after: cleanup_after} = state
+
     %{
       ets_consumers: ets_consumers,
       connection: connection,
@@ -231,7 +236,7 @@ defmodule ExRabbitMQ.Connection do
     end
   end
 
-  @doc false
+  @impl true
   def handle_info(_, state) do
     {:noreply, state}
   end

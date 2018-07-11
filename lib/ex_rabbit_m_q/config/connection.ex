@@ -86,11 +86,9 @@ defmodule ExRabbitMQ.Config.Connection do
     {key, connection_config}
   end
 
-  @doc """
-  Returns a part of the `app` configuration section, specified with the
-  `key` argument as a `ExRabbitMQ.Config.Connection` struct.
-  If the `app` argument is omitted, it defaults to `:exrabbitmq`.
-  """
+  # Returns a part of the `app` configuration section, specified with the
+  # `key` argument as a `ExRabbitMQ.Config.Connection` struct.
+  # If the `app` argument is omitted, it defaults to `:exrabbitmq`.
   @spec from_env(app :: atom, key :: atom | module) :: t()
   defp from_env(app, key) do
     config = Application.get_env(app, key, [])
@@ -109,9 +107,7 @@ defmodule ExRabbitMQ.Config.Connection do
     }
   end
 
-  @doc """
-  Merges an existing `ExRabbitMQ.Config.Connection` struct the default values when these are `nil`.
-  """
+  # Merges an existing `ExRabbitMQ.Config.Connection` struct the default values when these are `nil`.
   defp merge_defaults(%@name{} = config) do
     %@name{
       username: config.username,

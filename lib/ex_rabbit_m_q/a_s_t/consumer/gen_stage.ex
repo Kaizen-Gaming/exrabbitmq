@@ -1,16 +1,12 @@
 defmodule ExRabbitMQ.AST.Consumer.GenStage do
-  @moduledoc false
-  # @moduledoc """
-  # AST holding module for the consumer behaviour when the surrounding consumer is a GenStage.
-  # """
+  @moduledoc """
+  AST holding module for the consumer behaviour when the surrounding consumer is a GenStage.
+  """
 
   @doc """
   Produces part of the AST for the consumer behaviour when the consumer is a GenStage.
-
   It holds GenStage handle_info callbacks and a few default implementations.
-
   Specifically, it handles the basic_deliver and basic_cancel AMQP events.
-
   It also responds to connection and channel events, trying to keep a channel open when a connection is available.
   """
   def ast do

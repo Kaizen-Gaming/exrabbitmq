@@ -1,6 +1,8 @@
 defmodule ExRabbitMQ.Config.Exchange do
-  alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
+  @moduledoc false
+
   alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
+  alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
 
   @name __MODULE__
 

@@ -3,47 +3,37 @@ defmodule ExRabbitMQ.AST.Common do
   Common function and types for `ExRabbitMQ.Consumer` and `ExRabbitMQ.Producer` modules.
   """
 
-  @type connection ::
-          atom
-          | ExRabbitMQ.Config.Connection.t()
+  @type connection :: atom | ExRabbitMQ.Config.Connection.t()
 
-  @type queue ::
-          atom
-          | ExRabbitMQ.Config.Session.t()
+  @type queue :: atom | ExRabbitMQ.Config.Session.t()
 
-  @type result ::
-          {:ok, state :: term}
-          | {:error, reason :: term, state :: term}
+  @type result :: {:ok, state :: term} | {:error, reason :: term, state :: term}
 
-  @type basic_publish_result ::
-          :ok
-          | {:error, reason :: :blocked | :closing | :no_channel}
+  @type basic_publish_result :: :ok | {:error, reason :: :blocked | :closing | :no_channel}
 
   @callback xrmq_session_setup(
               channel :: %AMQP.Channel{},
-              session_config :: atom() | ExRabbitMQ.Config.Session.t(),
+              session_config :: atom | ExRabbitMQ.Config.Session.t(),
               state :: term
             ) :: C.result()
 
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.
-
   Specifically, it holds getters and setters, using the process dictionary, to hold important information such as the channel
   pid and monitor reference.
-
   It also holds the AST necessary to open a channel when an AMQP connection is ready.
   """
   def ast do
     # credo:disable-for-previous-line
     quote location: :keep do
       alias ExRabbitMQ.ChannelRipper, as: XRMQChannelRipper
+      alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
+      alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
+      alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
+      alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
       alias ExRabbitMQ.Connection, as: XRMQConnection
       alias ExRabbitMQ.Constants, as: XRMQConstants
       alias ExRabbitMQ.State, as: XRMQState
-      alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
-      alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
-      alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
-      alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
 
       def xrmq_channel_setup(_channel, state) do
         {:ok, state}

@@ -66,9 +66,9 @@ defmodule ExRabbitMQ.Config.Session do
 
   defstruct [:queue, :consume_opts, :qos_opts, :declarations]
 
+  alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
   alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
   alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
-  alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
 
   @doc """
   Returns a part of the `app` configuration section, specified with the
@@ -84,6 +84,17 @@ defmodule ExRabbitMQ.Config.Session do
     |> merge_defaults()
   end
 
+  def validate_bindings(%{bindings: bindings} = config) do
+    bindings
+    |> Enum.reduce_while(config, fn
+      binding, %XRMQBindConfig{exchange: nil} ->
+        raise ArgumentError, "invalid source exchange: #{inspect(binding)}"
+
+      _, _ ->
+        {:cont, config}
+    end)
+  end
+
   defp from_env(app, key) do
     config = Application.get_env(app, key, [])
 
@@ -95,18 +106,7 @@ defmodule ExRabbitMQ.Config.Session do
     }
   end
 
-  defp get_declarations(declarations) do
-    declarations
-    |> Enum.map(fn
-      {:exchange, config} -> {:exchange, XRMQExchangeConfig.get(config)}
-      {:queue, config} -> {:queue, XRMQQueueConfig.get(config)}
-      declaration -> raise ArgumentError, "invalid declaration #{inspect(declaration)}"
-    end)
-  end
-
-  @doc """
-  Merges an existing `ExRabbitMQ.Config.Session` struct the default values when these are `nil`.
-  """
+  # Merges an existing `ExRabbitMQ.Config.Session` struct the default values when these are `nil`.
   defp merge_defaults(%@name{} = config) do
     %@name{
       queue: config.queue || "",
@@ -116,14 +116,12 @@ defmodule ExRabbitMQ.Config.Session do
     }
   end
 
-  def validate_bindings(%{bindings: bindings} = config) do
-    bindings
-    |> Enum.reduce_while(config, fn
-      binding, %XRMQBindConfig{exchange: nil} ->
-        raise ArgumentError, "invalid source exchange: #{inspect(binding)}"
-
-      _, _ ->
-        {:cont, config}
+  defp get_declarations(declarations) do
+    declarations
+    |> Enum.map(fn
+      {:exchange, config} -> {:exchange, XRMQExchangeConfig.get(config)}
+      {:queue, config} -> {:queue, XRMQQueueConfig.get(config)}
+      declaration -> raise ArgumentError, "invalid declaration #{inspect(declaration)}"
     end)
   end
 end

@@ -4,7 +4,7 @@ defmodule ExRabbitMQ.Connection.Pool.Registry do
   @name ExRabbitMQ.RegistryPool
 
   def start_link do
-    Registry.start_link(:unique, @name)
+    Registry.start_link(keys: :unique, name: @name)
   end
 
   def via_tuple(connection_key) do

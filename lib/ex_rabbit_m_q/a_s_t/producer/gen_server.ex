@@ -1,20 +1,19 @@
 defmodule ExRabbitMQ.AST.Producer.GenServer do
-  @moduledoc false
-  # @moduledoc """
-  # AST holding module for the producer behaviour when the surrounding producer is a GenServer.
-  # """
+  @moduledoc """
+  AST holding module for the producer behaviour when the surrounding producer is a GenServer.
+  """
 
   @doc """
   Produces part of the AST for the producer behaviour when the producer is a GenServer.
-
   It holds GenServer handle_info callbacks.
-
   It responds to connection and channel events, trying to keep a channel open when a connection is available.
   """
   def ast do
     quote location: :keep do
       alias ExRabbitMQ.State, as: XRMQState
+      use GenServer
 
+      @impl true
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         new_state =
           state
@@ -24,12 +23,14 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
         {:noreply, new_state}
       end
 
+      @impl true
       def handle_info({:xrmq_connection, {:closed, _}}, state) do
         # WE WILL CONTINUE HANDLING THIS EVENT WHEN WE HANDLE THE CHANNEL DOWN EVENT
 
         {:noreply, state}
       end
 
+      @impl true
       def handle_info({:DOWN, ref, :process, pid, reason}, state) do
         case XRMQState.get_channel_info() do
           {_, ^ref} ->

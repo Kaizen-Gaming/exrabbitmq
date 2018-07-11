@@ -6,8 +6,8 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
 
   @module __MODULE__
 
-  alias ExRabbitMQ.Connection.Pool
   alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
+  alias ExRabbitMQ.Connection.Pool
   alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
   use DynamicSupervisor
 
@@ -22,7 +22,7 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
   @doc """
   Starts a new `ExRabbitMQ.Connection` process with the specified configuration and supervises it.
   """
-  @spec start_child(app :: atom(), connection_config :: ConnectionConfig.t() | atom()) ::
+  @spec start_child(app :: atom, connection_config :: ConnectionConfig.t() | atom) ::
           Supervisor.on_start_child()
   def start_child(app \\ :exrabbitmq, connection_key) do
     {hash_key, connection_config} =
@@ -41,7 +41,6 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
     DynamicSupervisor.start_child(@module, child_spec)
   end
 
-  @doc false
   def init(_args) do
     DynamicSupervisor.init(strategy: :one_for_one)
   end

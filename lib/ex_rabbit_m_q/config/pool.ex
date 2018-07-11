@@ -1,4 +1,6 @@
 defmodule ExRabbitMQ.Config.Pool do
+  @moduledoc false
+
   @name __MODULE__
 
   @type t :: %__MODULE__{

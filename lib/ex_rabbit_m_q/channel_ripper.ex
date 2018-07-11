@@ -8,9 +8,9 @@ defmodule ExRabbitMQ.ChannelRipper do
   use GenServer
 
   @doc """
-  Starts a new `#{@module}` process which will immediately starts monitoring the calling process.
+  Starts a new `ExRabbitMQ.ChannelRipper` process which will immediately starts monitoring the calling process.
   """
-  @spec start() :: GenServer.on_start()
+  @spec start :: GenServer.on_start()
   def start do
     GenServer.start(@module, %{monitored_pid: self(), channel: nil})
   end
@@ -23,26 +23,28 @@ defmodule ExRabbitMQ.ChannelRipper do
     GenServer.call(channel_ripper_pid, {:set_channel, channel})
   end
 
-  @doc false
-  def init(%{monitored_pid: monitored_pid} = state) do
+  @impl true
+  def init(state) do
+    %{monitored_pid: monitored_pid} = state
+
     Process.monitor(monitored_pid)
 
     {:ok, state}
   end
 
-  @doc false
+  @impl true
   def handle_call({:set_channel, channel}, _from, state) do
     new_state = %{state | channel: channel}
 
     {:reply, :ok, new_state}
   end
 
-  @doc false
+  @impl true
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, %{channel: nil} = state) do
     {:stop, :normal, state}
   end
 
-  @doc false
+  @impl true
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, %{channel: channel} = state) do
     AMQP.Channel.close(channel)
 
@@ -54,7 +56,7 @@ defmodule ExRabbitMQ.ChannelRipper do
     _, _ -> {:stop, :normal, state}
   end
 
-  @doc false
+  @impl true
   def handle_info(_, state) do
     {:noreply, state}
   end

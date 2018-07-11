@@ -123,7 +123,7 @@ defmodule ExRabbitMQ.Consumer do
 
   **Deprecated:** Use `ExRabbitMQ.State.get_connection_config/0` instead.
   """
-  @callback xrmq_get_connection_config() :: term
+  @callback xrmq_get_connection_config :: term
 
   @doc """
   Returns the queue configuration as it was passed to `c:xrmq_init/4`.
@@ -133,7 +133,7 @@ defmodule ExRabbitMQ.Consumer do
 
   **Deprecated:** Use `ExRabbitMQ.State.get_session_config/0` instead.
   """
-  @callback xrmq_get_session_config() :: term
+  @callback xrmq_get_session_config :: term
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened.
@@ -174,9 +174,7 @@ defmodule ExRabbitMQ.Consumer do
   the queue's configuration to setup the QoS, declare the exchange and bind it with the queue.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
-  """
 
-  @doc """
   This callback is the only required callback (i.e., without any default implementation) and
   is called as a response to a `:basic_consume` message.
 
@@ -255,12 +253,10 @@ defmodule ExRabbitMQ.Consumer do
     quote location: :keep do
       require Logger
 
-      @behaviour ExRabbitMQ.Consumer
-
-      alias ExRabbitMQ.Constants, as: XRMQConstants
-      alias ExRabbitMQ.State, as: XRMQState
       alias ExRabbitMQ.Config.Connection, as: XRMQConnectionConfig
       alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
+      alias ExRabbitMQ.Constants, as: XRMQConstants
+      alias ExRabbitMQ.State, as: XRMQState
 
       unquote(inner_ast)
 
@@ -276,9 +272,7 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
-      def xrmq_open_channel_setup_consume(state) do
-        xrmq_open_channel_setup_consume(true, state)
-      end
+      def xrmq_open_channel_setup_consume(start_consuming \\ true, state)
 
       def xrmq_open_channel_setup_consume(start_consuming, state) do
         with {:ok, state} <- xrmq_open_channel(state),

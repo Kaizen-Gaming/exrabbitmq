@@ -1,9 +1,11 @@
 defmodule ExRabbitMQ.Connection.Pool do
+  @moduledoc false
+
   alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
   alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
 
   @spec start(
-          hash_key :: {atom(), ConnectionConfig.t()},
+          hash_key :: {atom, ConnectionConfig.t()},
           connection_config :: ConnectionConfig.t()
         ) :: no_return
   def start(hash_key, %ConnectionConfig{pool: pool} = connection_config) do

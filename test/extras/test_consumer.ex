@@ -1,11 +1,14 @@
 defmodule TestConsumer do
   @module __MODULE__
 
-  use GenServer
   use ExRabbitMQ.Consumer, GenServer
 
   def start_link(state) do
     GenServer.start_link(@module, state)
+  end
+
+  def stop(consumer_pid) do
+    GenServer.cast(consumer_pid, :stop)
   end
 
   def init(state) do
@@ -14,18 +17,13 @@ defmodule TestConsumer do
     {:ok, state}
   end
 
-  def stop(consumer_pid) do
-    GenServer.cast(consumer_pid, :stop)
-  end
+  def handle_cast(:init, state) do
+    %{
+      tester_pid: tester_pid,
+      connection_config: connection_config,
+      session_config: session_config
+    } = state
 
-  def handle_cast(
-        :init,
-        %{
-          tester_pid: tester_pid,
-          connection_config: connection_config,
-          session_config: session_config
-        } = state
-      ) do
     {message, new_state} =
       connection_config
       |> xrmq_init(session_config, state)

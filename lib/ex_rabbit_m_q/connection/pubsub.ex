@@ -41,7 +41,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
   end
 
   @doc """
-  Send the `message` to all processes that have subscribed previously with `#{@name}.subscribe/2`
+  Send the `message` to all processes that have subscribed previously with `ExRabbitMQ.Connection.PubSub.subscribe/2`
   in the table `tid`. If the process is not alive, it will be automatically get unsubscribed.
   """
   @spec publish(tid :: tid, message :: term) :: :ok

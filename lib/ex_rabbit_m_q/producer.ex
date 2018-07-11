@@ -45,6 +45,7 @@ defmodule ExRabbitMQ.Producer do
   """
 
   alias ExRabbitMQ.AST.Common, as: C
+  alias ExRabbitMQ.Config.Session
 
   require ExRabbitMQ.AST.Common
   require ExRabbitMQ.AST.Producer.GenServer
@@ -63,7 +64,8 @@ defmodule ExRabbitMQ.Producer do
     For more information on how to configure the connection, check `ExRabbitMQ.Config.Connection`.
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_init(connection :: C.connection(), state :: term) :: C.result()
+  @callback xrmq_init(connection :: C.connection(), session :: atom | Session.t(), state :: term) ::
+              C.result()
 
   @doc """
   Returns a part of the `:exrabbitmq` configuration section, specified with the
@@ -83,7 +85,7 @@ defmodule ExRabbitMQ.Producer do
 
   **Deprecated:** Use `ExRabbitMQ.State.get_connection_config/0` instead.
   """
-  @callback xrmq_get_connection_config() :: term
+  @callback xrmq_get_connection_config :: term
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened.

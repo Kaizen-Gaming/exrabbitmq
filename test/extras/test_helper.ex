@@ -28,6 +28,7 @@ defmodule TestHelper do
       500,
       "failed to open a connection for the #{consumer_or_producer}"
     )
+
     # we monitor the producer's/consumer's connection GenServer wrapper so that we can wait for it to exit
     connection_monitor = Process.monitor(connection_pid)
 

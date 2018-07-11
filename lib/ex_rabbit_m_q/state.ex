@@ -11,7 +11,7 @@ defmodule ExRabbitMQ.State do
   @doc """
   Get the `ExRabbitMQ.Config.Connection` struct from the process dictionary.
   """
-  @spec get_connection_config() :: ConnectionConfig.t() | nil
+  @spec get_connection_config :: ConnectionConfig.t() | nil
   def get_connection_config do
     Process.get(Constants.connection_config_key())
   end
@@ -27,7 +27,7 @@ defmodule ExRabbitMQ.State do
   @doc """
   Get the `ExRabbitMQ.Connection` pid from the process dictionary.
   """
-  @spec get_connection_pid() :: pid | nil
+  @spec get_connection_pid :: pid | nil
   def get_connection_pid do
     Process.get(Constants.connection_pid_key())
   end
@@ -43,7 +43,7 @@ defmodule ExRabbitMQ.State do
   @doc """
   Get the `ExRabbitMQ.ChannelRipper` pid from the process dictionary.
   """
-  @spec get_channel_ripper_pid() :: pid | nil
+  @spec get_channel_ripper_pid :: pid | nil
   def get_channel_ripper_pid do
     Process.get(Constants.channel_ripper_pid_key())
   end
@@ -59,7 +59,7 @@ defmodule ExRabbitMQ.State do
   @doc """
   Get the `AMQP.Channel` struct and the channel pid from the process dictionary.
   """
-  @spec get_channel_info() :: {%AMQP.Channel{} | nil, pid | nil}
+  @spec get_channel_info :: {%AMQP.Channel{} | nil, pid | nil}
   def get_channel_info do
     {Process.get(Constants.channel_key()), Process.get(Constants.channel_monitor_key())}
   end
@@ -77,7 +77,7 @@ defmodule ExRabbitMQ.State do
   @doc """
   Get the `ExRabbitMQ.Config.Session` struct from the process dictionary.
   """
-  @spec get_session_config() :: XRMQSessionConfig.t() | nil
+  @spec get_session_config :: XRMQSessionConfig.t() | nil
   def get_session_config do
     Process.get(Constants.session_config_key())
   end
