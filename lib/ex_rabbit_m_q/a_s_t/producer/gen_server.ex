@@ -11,7 +11,6 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
   def ast do
     quote location: :keep do
       alias ExRabbitMQ.State, as: XRMQState
-      use GenServer
 
       @impl true
       def handle_info({:xrmq_connection, {:open, connection}}, state) do

@@ -12,7 +12,7 @@ defmodule ExRabbitMQ.AST.Common do
   @type basic_publish_result :: :ok | {:error, reason :: :blocked | :closing | :no_channel}
 
   @callback xrmq_session_setup(
-              channel :: %AMQP.Channel{},
+              channel :: AMQP.Channel.t(),
               session_config :: atom | ExRabbitMQ.Config.Session.t(),
               state :: term
             ) :: C.result()

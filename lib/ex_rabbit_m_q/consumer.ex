@@ -140,7 +140,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_setup(channel :: %AMQP.Channel{}, state :: term) :: C.result()
+  @callback xrmq_channel_setup(channel :: AMQP.Channel.t(), state :: term) :: C.result()
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened,
@@ -148,7 +148,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_open(channel :: %AMQP.Channel{}, state :: term) :: C.result()
+  @callback xrmq_channel_open(channel :: AMQP.Channel.t(), state :: term) :: C.result()
 
   @doc """
   This hook is called automatically, if `start_consuming` was `true` when `c:xrmq_init/4`.

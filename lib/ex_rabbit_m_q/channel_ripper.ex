@@ -18,7 +18,7 @@ defmodule ExRabbitMQ.ChannelRipper do
   @doc """
   Sets the AMQP channel to kill when the monitored process dies.
   """
-  @spec set_channel(channel_ripper_pid :: pid, channel :: %AMQP.Channel{}) :: term
+  @spec set_channel(channel_ripper_pid :: pid, channel :: AMQP.Channel.t()) :: term
   def set_channel(channel_ripper_pid, channel) do
     GenServer.call(channel_ripper_pid, {:set_channel, channel})
   end
