@@ -13,17 +13,14 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
     quote location: :keep do
       alias ExRabbitMQ.State, as: XRMQState
 
-      @impl true
       def handle_info({:basic_deliver, payload, meta}, state) do
         xrmq_basic_deliver(payload, meta, state)
       end
 
-      @impl true
       def handle_info({:basic_cancel, cancellation_info}, state) do
         xrmq_basic_cancel(cancellation_info, state)
       end
 
-      @impl true
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         new_state =
           state
@@ -33,14 +30,12 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
         {:noreply, new_state}
       end
 
-      @impl true
       def handle_info({:xrmq_connection, {:closed, _}}, state) do
         # WE WILL CONTINUE HANDLING THIS EVENT WHEN WE HANDLE THE CHANNEL DOWN EVENT
 
         {:noreply, state}
       end
 
-      @impl true
       def handle_info({:DOWN, ref, :process, pid, reason}, state) do
         case XRMQState.get_channel_info() do
           {_, ^ref} ->
