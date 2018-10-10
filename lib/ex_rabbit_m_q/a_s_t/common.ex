@@ -108,11 +108,6 @@ defmodule ExRabbitMQ.AST.Common do
                   xrmq_channel_open(channel, state)
                 end
 
-              :closing ->
-                XRMQState.set_channel_info(nil, nil)
-
-                {:error, :closing, state}
-
               error ->
                 Logger.error("could not open a new channel: #{inspect(error)}")
                 XRMQState.set_channel_info(nil, nil)

@@ -76,7 +76,7 @@ defmodule ExRabbitMQ.Config.Connection do
     |> validate_connection_config
   end
 
-  @spec to_hash_key(connection_config :: t()) :: {atom(), t()}
+  @spec to_hash_key(connection_config :: t()) :: {binary, t()}
   def to_hash_key(connection_config) do
     key =
       connection_config
