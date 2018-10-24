@@ -21,9 +21,9 @@ defmodule ExRabbitMQ.Mixfile do
 
   defp deps do
     [
-      {:credo, "~> 0.8", runtime: false},
+      {:credo, "~> 0.8", only: [:dev], runtime: false},
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
-      {:ex_doc, "~> 0.18", runtime: false},
+      {:ex_doc, "~> 0.18", only: [:dev], runtime: false},
       {:amqp, "~> 0.3"}
     ]
   end
