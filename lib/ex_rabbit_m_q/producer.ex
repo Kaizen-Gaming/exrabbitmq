@@ -64,8 +64,7 @@ defmodule ExRabbitMQ.Producer do
     For more information on how to configure the connection, check `ExRabbitMQ.Config.Connection`.
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_init(connection :: C.connection(), session :: atom | Session.t(), state :: term) ::
-              C.result()
+  @callback xrmq_init(C.connection(), atom | Session.t(), term) :: C.result()
 
   @doc """
   Returns a part of the `:exrabbitmq` configuration section, specified with the
@@ -75,7 +74,7 @@ defmodule ExRabbitMQ.Producer do
 
   **Deprecated:** Use `ExRabbitMQ.Config.Connection.from_env/2` instead.
   """
-  @callback xrmq_get_env_config(key :: atom) :: keyword
+  @callback xrmq_get_env_config(atom) :: keyword
 
   @doc """
   Returns the connection configuration as it was passed to `c:xrmq_init/2`.
@@ -92,7 +91,7 @@ defmodule ExRabbitMQ.Producer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_setup(channel :: AMQP.Channel.t(), state :: term) :: C.result()
+  @callback xrmq_channel_setup(AMQP.Channel.t(), term) :: C.result()
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened,
@@ -100,25 +99,20 @@ defmodule ExRabbitMQ.Producer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_open(channel :: AMQP.Channel.t(), state :: term) :: C.result()
+  @callback xrmq_channel_open(AMQP.Channel.t(), term) :: C.result()
 
   @doc """
   This overridable function publishes the **binary** `payload` to the `exchange` using the provided `routing_key`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_publish(
-              payload :: String.t(),
-              exchange :: String.t(),
-              routing_key :: String.t(),
-              opts :: [term]
-            ) :: C.basic_publish_result()
+  @callback xrmq_basic_publish(String.t(), String.t(), String.t(), [term]) ::
+              C.basic_publish_result()
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.
   """
-  @callback xrmq_extract_state({:ok, state :: term} | {:error, reason :: term, state :: term}) ::
-              state :: term
+  @callback xrmq_extract_state({:ok, term} | {:error, term, term}) :: state :: term
 
   defmacro __using__(_) do
     common_ast = ExRabbitMQ.AST.Common.ast()

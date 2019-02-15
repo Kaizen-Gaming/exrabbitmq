@@ -55,7 +55,12 @@ defmodule ExRabbitMQ.Config.Session do
     ]
   ```
   """
-  @name __MODULE__
+
+  alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
+  alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
+  alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
+
+  defstruct [:queue, :consume_opts, :qos_opts, :declarations]
 
   @type t :: %__MODULE__{
           queue: String.t(),
@@ -64,20 +69,15 @@ defmodule ExRabbitMQ.Config.Session do
           declarations: list
         }
 
-  defstruct [:queue, :consume_opts, :qos_opts, :declarations]
-
-  alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
-  alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
-  alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
-
   @doc """
   Returns a part of the `app` configuration section, specified with the
   `key` argument as a `ExRabbitMQ.Config.Session` struct.
   If the `app` argument is omitted, it defaults to `:exrabbitmq`.
   """
-  @spec get(app :: atom, session_config :: atom | t()) :: t()
+  @spec get(atom, atom | t()) :: t()
   def get(app \\ :exrabbitmq, session_config) do
-    case session_config do
+    session_config
+    |> case do
       session_config when is_atom(session_config) -> from_env(app, session_config)
       _ -> session_config
     end
@@ -98,7 +98,7 @@ defmodule ExRabbitMQ.Config.Session do
   defp from_env(app, key) do
     config = Application.get_env(app, key, [])
 
-    %@name{
+    %__MODULE__{
       queue: config[:queue],
       consume_opts: config[:consume_opts],
       qos_opts: config[:qos_opts],
@@ -107,8 +107,8 @@ defmodule ExRabbitMQ.Config.Session do
   end
 
   # Merges an existing `ExRabbitMQ.Config.Session` struct the default values when these are `nil`.
-  defp merge_defaults(%@name{} = config) do
-    %@name{
+  defp merge_defaults(%__MODULE__{} = config) do
+    %__MODULE__{
       queue: config.queue || "",
       consume_opts: config.consume_opts || [],
       qos_opts: config.qos_opts || [],

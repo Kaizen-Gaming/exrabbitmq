@@ -3,8 +3,6 @@ defmodule ExRabbitMQ.ChannelRipper do
   Monitors when a `ExRabbitMQ.Producer` or `ExRabbitMQ.Consumer` dies and when it does, it kills the AMQP channel.
   """
 
-  @module __MODULE__
-
   use GenServer
 
   @doc """
@@ -12,13 +10,13 @@ defmodule ExRabbitMQ.ChannelRipper do
   """
   @spec start :: GenServer.on_start()
   def start do
-    GenServer.start(@module, %{monitored_pid: self(), channel: nil})
+    GenServer.start(__MODULE__, %{monitored_pid: self(), channel: nil})
   end
 
   @doc """
   Sets the AMQP channel to kill when the monitored process dies.
   """
-  @spec set_channel(channel_ripper_pid :: pid, channel :: AMQP.Channel.t()) :: term
+  @spec set_channel(pid, AMQP.Channel.t()) :: term
   def set_channel(channel_ripper_pid, channel) do
     GenServer.call(channel_ripper_pid, {:set_channel, channel})
   end

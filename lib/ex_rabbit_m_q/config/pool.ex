@@ -1,7 +1,7 @@
 defmodule ExRabbitMQ.Config.Pool do
   @moduledoc false
 
-  @name __MODULE__
+  defstruct [:size, :strategy, :max_overflow]
 
   @type t :: %__MODULE__{
           size: pos_integer,
@@ -9,11 +9,10 @@ defmodule ExRabbitMQ.Config.Pool do
           max_overflow: pos_integer
         }
 
-  defstruct [:size, :strategy, :max_overflow]
-
-  @spec get(pool_config :: t()) :: t()
+  @spec get(t()) :: t()
   def get(pool_config) do
-    case pool_config do
+    pool_config
+    |> case do
       pool_config when is_list(pool_config) -> from_env(pool_config)
       _ -> pool_config
     end
@@ -21,15 +20,15 @@ defmodule ExRabbitMQ.Config.Pool do
   end
 
   defp from_env(config) do
-    %@name{
+    %__MODULE__{
       size: config[:size],
       strategy: config[:strategy],
       max_overflow: config[:max_overflow]
     }
   end
 
-  defp merge_defaults(%@name{} = config) do
-    %@name{
+  defp merge_defaults(%__MODULE__{} = config) do
+    %__MODULE__{
       size: config.size || 20,
       strategy: :weighted,
       max_overflow: config.max_overflow || 1

@@ -4,7 +4,7 @@ defmodule ExRabbitMQ.Config.Queue do
   alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
   alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
 
-  @name __MODULE__
+  defstruct [:name, :opts, :bindings]
 
   @type t :: %__MODULE__{
           name: String.t(),
@@ -12,11 +12,10 @@ defmodule ExRabbitMQ.Config.Queue do
           bindings: list
         }
 
-  defstruct [:name, :opts, :bindings]
-
-  @spec get(queue_config :: keyword) :: t()
+  @spec get(keyword) :: t()
   def get(queue_config) do
-    case queue_config do
+    queue_config
+    |> case do
       queue_config when is_list(queue_config) -> from_env(queue_config)
       _ -> queue_config
     end
@@ -26,22 +25,22 @@ defmodule ExRabbitMQ.Config.Queue do
   end
 
   defp from_env(config) do
-    %@name{
+    %__MODULE__{
       name: config[:name],
       opts: config[:opts],
       bindings: XRMQBindConfig.get(config[:bindings] || [])
     }
   end
 
-  defp merge_defaults(%@name{} = config) do
-    %@name{
+  defp merge_defaults(%__MODULE__{} = config) do
+    %__MODULE__{
       name: config.name,
       opts: config.opts || [],
       bindings: XRMQBindConfig.get(config.bindings || [])
     }
   end
 
-  defp validate_name(%@name{name: name} = config) when is_binary(name), do: config
+  defp validate_name(%__MODULE__{name: name} = config) when is_binary(name), do: config
 
   defp validate_name(config) do
     raise ArgumentError, "invalid queue name declaration: #{inspect(config)}"

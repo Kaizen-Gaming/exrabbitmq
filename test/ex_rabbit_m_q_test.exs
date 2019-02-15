@@ -1,4 +1,6 @@
 defmodule ExRabbitMQTest do
+  @moduledoc false
+
   use ExUnit.Case, async: false
 
   alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
