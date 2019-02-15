@@ -67,11 +67,11 @@ defmodule ExRabbitMQ.Consumer do
   require ExRabbitMQ.AST.Consumer.GenStage
 
   @type callback_result ::
-          {:noreply, state :: term}
-          | {:noreply, state :: term, timeout | :hibernate}
-          | {:noreply, [event :: term], state :: term}
-          | {:noreply, [event :: term], state :: term, :hibernate}
-          | {:stop, reason :: term, state :: term}
+          {:noreply, term}
+          | {:noreply, term, timeout | :hibernate}
+          | {:noreply, [term], term}
+          | {:noreply, [term], term, :hibernate}
+          | {:stop, term, term}
 
   @doc """
   Setup the process for consuming a RabbitMQ queue.
@@ -94,18 +94,11 @@ defmodule ExRabbitMQ.Consumer do
     been established successfully. *Optional: Defaults to `true`.*
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_init(
-              connection :: C.connection(),
-              queue :: C.queue(),
-              start_consuming :: boolean,
-              state :: term
-            ) :: C.result()
+  @callback xrmq_init(C.connection(), C.queue(), boolean, term) :: C.result()
 
   @doc false
-  @callback xrmq_open_channel_setup_consume(
-              state :: term | state :: term,
-              start_consuming :: boolean
-            ) :: {:ok, state :: term} | {:error, reason :: term, state :: term}
+  @callback xrmq_open_channel_setup_consume(term, boolean) :: {:ok, term} | {:error, term, term}
+
   @doc """
   Returns a part of the `:exrabbitmq` configuration section, specified with the `key` argument.
 
@@ -113,7 +106,7 @@ defmodule ExRabbitMQ.Consumer do
 
   **Deprecated:** Use `ExRabbitMQ.Config.Connection.from_env/2` or `ExRabbitMQ.Config.Session.from_env/2` instead.
   """
-  @callback xrmq_get_env_config(key :: atom) :: keyword
+  @callback xrmq_get_env_config(atom) :: keyword
 
   @doc """
   Returns the connection configuration as it was passed to `c:xrmq_init/4`.
@@ -140,7 +133,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_setup(channel :: AMQP.Channel.t(), state :: term) :: C.result()
+  @callback xrmq_channel_setup(AMQP.Channel.t(), term) :: C.result()
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened,
@@ -148,7 +141,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_open(channel :: AMQP.Channel.t(), state :: term) :: C.result()
+  @callback xrmq_channel_open(AMQP.Channel.t(), term) :: C.result()
 
   @doc """
   This hook is called automatically, if `start_consuming` was `true` when `c:xrmq_init/4`.
@@ -164,7 +157,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_consume(state :: term) :: C.result()
+  @callback xrmq_consume(term) :: C.result()
 
   @doc """
   This hook is called automatically as part of the flow in `c:xrmq_consume/1`.
@@ -182,7 +175,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_deliver(payload :: term, meta :: term, state :: term) :: callback_result
+  @callback xrmq_basic_deliver(term, term, term) :: callback_result
 
   @doc """
   This overridable hook is  called as a response to a `:basic_cancel` message.
@@ -192,7 +185,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_cancel(cancellation_info :: term, state :: term) :: callback_result
+  @callback xrmq_basic_cancel(term, term) :: callback_result
 
   @doc """
   This overridable function can be called whenever `no_ack` is set to `false` and the user
@@ -203,7 +196,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_ack(delivery_tag :: String.t(), state :: term) :: C.result()
+  @callback xrmq_basic_ack(String.t(), term) :: C.result()
 
   @doc """
   This overridable function can be called whenever `no_ack` is set to `false` and the user wants
@@ -216,26 +209,19 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_reject(delivery_tag :: String.t(), opts :: term, state :: term) ::
-              C.result()
+  @callback xrmq_basic_reject(String.t(), term, term) :: C.result()
 
   @doc """
   This overridable function publishes the `payload` to the `exchange` using the provided `routing_key`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_publish(
-              payload :: term,
-              exchange :: String.t(),
-              routing_key :: String.t(),
-              opts :: [term]
-            ) :: C.basic_publish_result()
+  @callback xrmq_basic_publish(term, String.t(), String.t(), [term]) :: C.basic_publish_result()
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.
   """
-  @callback xrmq_extract_state({:ok, state :: term} | {:error, reason :: term, state :: term}) ::
-              state :: term
+  @callback xrmq_extract_state({:ok, term} | {:error, term, term}) :: term
 
   # credo:disable-for-next-line
   defmacro __using__({:__aliases__, _, [kind]})
@@ -251,12 +237,12 @@ defmodule ExRabbitMQ.Consumer do
 
     # credo:disable-for-next-line
     quote location: :keep do
-      require Logger
-
       alias ExRabbitMQ.Config.Connection, as: XRMQConnectionConfig
       alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
       alias ExRabbitMQ.Constants, as: XRMQConstants
       alias ExRabbitMQ.State, as: XRMQState
+
+      require Logger
 
       unquote(inner_ast)
 

@@ -4,10 +4,7 @@ defmodule ExRabbitMQ.Connection.Pool do
   alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
   alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
 
-  @spec start(
-          hash_key :: {atom, ConnectionConfig.t()},
-          connection_config :: ConnectionConfig.t()
-        ) :: no_return
+  @spec start({atom, ConnectionConfig.t()}, ConnectionConfig.t()) :: no_return
   def start(hash_key, %ConnectionConfig{pool: pool} = connection_config) do
     RegistryPool.start_link()
 

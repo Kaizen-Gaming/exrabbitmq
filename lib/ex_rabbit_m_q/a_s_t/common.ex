@@ -7,15 +7,12 @@ defmodule ExRabbitMQ.AST.Common do
 
   @type queue :: atom | ExRabbitMQ.Config.Session.t()
 
-  @type result :: {:ok, state :: term} | {:error, reason :: term, state :: term}
+  @type result :: {:ok, term} | {:error, term, term}
 
-  @type basic_publish_result :: :ok | {:error, reason :: :blocked | :closing | :no_channel}
+  @type basic_publish_result :: :ok | {:error, :blocked | :closing | :no_channel}
 
-  @callback xrmq_session_setup(
-              channel :: AMQP.Channel.t(),
-              session_config :: atom | ExRabbitMQ.Config.Session.t(),
-              state :: term
-            ) :: C.result()
+  @callback xrmq_session_setup(AMQP.Channel.t(), atom | ExRabbitMQ.Config.Session.t(), term) ::
+              result
 
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.

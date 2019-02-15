@@ -8,18 +8,16 @@ defmodule ExRabbitMQ.Connection.PubSub do
   the subscription will be declined when that limit is reached.
   """
 
-  @name __MODULE__
+  alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
 
   @type tid :: :ets.tid() | atom
-
-  alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
 
   @doc """
   Creates a new private [ETS](http://erlang.org/doc/man/ets.html) table for keeping
   the processes' subscriptions.
   """
-  @spec new(name :: atom) :: tid
-  def new(name \\ @name) do
+  @spec new(atom) :: tid
+  def new(name \\ __MODULE__) do
     :ets.new(name, [:private])
   end
 
@@ -27,7 +25,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
   Insert the process `pid` in the table `tid`, so that it receives messages send
   using the `ExRabbitMQ.Connection.PubSub.publish/2`.
   """
-  @spec subscribe(tid :: tid, connection_config :: ConnectionConfig.t(), pid :: pid) :: boolean
+  @spec subscribe(tid, ConnectionConfig.t(), pid) :: boolean
   def subscribe(tid, _connection_config, pid) do
     :ets.insert_new(tid, {pid})
   end
@@ -35,7 +33,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
   @doc """
   Remove the process `pid` from the table `tid`, thus it stop receiving any messages.
   """
-  @spec unsubscribe(tid :: tid, pid :: pid) :: true
+  @spec unsubscribe(tid, pid) :: true
   def unsubscribe(tid, pid) do
     :ets.delete(tid, pid)
   end
@@ -44,7 +42,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
   Send the `message` to all processes that have subscribed previously with `ExRabbitMQ.Connection.PubSub.subscribe/2`
   in the table `tid`. If the process is not alive, it will be automatically get unsubscribed.
   """
-  @spec publish(tid :: tid, message :: term) :: :ok
+  @spec publish(tid, term) :: :ok
   def publish(tid, message) do
     tid
     |> :ets.select([{:_, [], [:"$_"]}])
@@ -62,7 +60,7 @@ defmodule ExRabbitMQ.Connection.PubSub do
   @doc """
   Returns the current size of subscribed processes in the table `tid`.
   """
-  @spec size(tid :: tid) :: non_neg_integer
+  @spec size(tid) :: non_neg_integer
   def size(tid) do
     :ets.info(tid)[:size]
   end

@@ -34,24 +34,9 @@ defmodule ExRabbitMQ.Config.Connection do
     max_channels: 65535,
   ```
   """
-  require Logger
-
   alias ExRabbitMQ.Config.Pool, as: PoolConfig
 
-  @name __MODULE__
-
-  @type t :: %__MODULE__{
-          username: String.t(),
-          password: String.t(),
-          host: String.t(),
-          port: pos_integer,
-          vhost: String.t(),
-          heartbeat: pos_integer,
-          reconnect_after: pos_integer,
-          max_channels: pos_integer,
-          pool: PoolConfig.t(),
-          cleanup_after: pos_integer
-        }
+  require Logger
 
   defstruct [
     :username,
@@ -66,9 +51,23 @@ defmodule ExRabbitMQ.Config.Connection do
     :cleanup_after
   ]
 
-  @spec get(app :: atom, connection_config :: atom | t()) :: t()
+  @type t :: %__MODULE__{
+          username: String.t(),
+          password: String.t(),
+          host: String.t(),
+          port: pos_integer,
+          vhost: String.t(),
+          heartbeat: pos_integer,
+          reconnect_after: pos_integer,
+          max_channels: pos_integer,
+          pool: PoolConfig.t(),
+          cleanup_after: pos_integer
+        }
+
+  @spec get(atom, atom | t()) :: t()
   def get(app \\ :exrabbitmq, connection_config) do
-    case connection_config do
+    connection_config
+    |> case do
       connection_config when is_atom(connection_config) -> from_env(app, connection_config)
       _ -> connection_config
     end
@@ -76,7 +75,7 @@ defmodule ExRabbitMQ.Config.Connection do
     |> validate_connection_config
   end
 
-  @spec to_hash_key(connection_config :: t()) :: {binary, t()}
+  @spec to_hash_key(t()) :: {binary, t()}
   def to_hash_key(connection_config) do
     key =
       connection_config
@@ -89,11 +88,11 @@ defmodule ExRabbitMQ.Config.Connection do
   # Returns a part of the `app` configuration section, specified with the
   # `key` argument as a `ExRabbitMQ.Config.Connection` struct.
   # If the `app` argument is omitted, it defaults to `:exrabbitmq`.
-  @spec from_env(app :: atom, key :: atom | module) :: t()
+  @spec from_env(atom, atom | module) :: t()
   defp from_env(app, key) do
     config = Application.get_env(app, key, [])
 
-    %@name{
+    %__MODULE__{
       username: config[:username],
       password: config[:password],
       host: config[:host],
@@ -108,8 +107,8 @@ defmodule ExRabbitMQ.Config.Connection do
   end
 
   # Merges an existing `ExRabbitMQ.Config.Connection` struct the default values when these are `nil`.
-  defp merge_defaults(%@name{} = config) do
-    %@name{
+  defp merge_defaults(%__MODULE__{} = config) do
+    %__MODULE__{
       username: config.username,
       password: config.password,
       host: config.host,
@@ -123,12 +122,12 @@ defmodule ExRabbitMQ.Config.Connection do
     }
   end
 
-  defp validate_connection_config(%@name{max_channels: max_channels} = config) do
+  defp validate_connection_config(%__MODULE__{max_channels: max_channels} = config) do
     if max_channels >= 1 and max_channels <= 65_535 do
       config
     else
       Logger.warn("The maximum number of connections per channel is out of range 1 to 65535.")
-      %@name{config | max_channels: 65_535}
+      %__MODULE__{config | max_channels: 65_535}
     end
   end
 end

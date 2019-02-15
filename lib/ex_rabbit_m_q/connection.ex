@@ -12,14 +12,12 @@ defmodule ExRabbitMQ.Connection do
   Check `ExRabbitMQ.Connection.Group` and `ExRabbitMQ.Connection.PubSub` for more information.
   """
 
-  @name __MODULE__
+  use GenServer, restart: :transient
 
   alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
   alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
   alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
   alias ExRabbitMQ.Connection.PubSub
-
-  use GenServer, restart: :transient
 
   require Logger
 
@@ -34,9 +32,9 @@ defmodule ExRabbitMQ.Connection do
   @doc """
   Starts a new `ExRabbitMQ.Connection` process and links it with the calling one.
   """
-  @spec start_link(connection_config :: ConnectionConfig.t()) :: GenServer.on_start()
+  @spec start_link(ConnectionConfig.t()) :: GenServer.on_start()
   def start_link(%ConnectionConfig{} = connection_config) do
-    GenServer.start_link(@name, connection_config)
+    GenServer.start_link(__MODULE__, connection_config)
   end
 
   @doc """
@@ -44,7 +42,7 @@ defmodule ExRabbitMQ.Connection do
 
   The `connection_pid` is the `GenServer` pid implementing the called `ExRabbitMQ.Connection`.
   """
-  @spec get(connection_pid :: pid) :: {:ok, AMQP.Connection.t() | nil} | {:error, term}
+  @spec get(pid) :: {:ok, AMQP.Connection.t() | nil} | {:error, term}
   def get(nil) do
     {:error, :nil_connection_pid}
   end
@@ -71,7 +69,7 @@ defmodule ExRabbitMQ.Connection do
   The `connection_config` is the `ExRabbitMQ.Config.Connection` that the `ExRabbitMQ.Connection` has to be using in order to allow
   the subscription.
   """
-  @spec get_subscribe(connection_config :: ConnectionConfig.t()) :: {:ok, pid} | {:error, atom}
+  @spec get_subscribe(ConnectionConfig.t()) :: {:ok, pid} | {:error, atom}
   def get_subscribe(connection_config) do
     case PoolSupervisor.start_child(connection_config) do
       {:error, {:already_started, pool_pid}} -> subscribe(pool_pid, connection_config)
@@ -82,13 +80,13 @@ defmodule ExRabbitMQ.Connection do
   @doc """
   Gracefully closes the RabbitMQ connection and terminates its GenServer handler identified by `connection_pid`.
   """
-  @spec close(connection_pid :: pid) :: :ok
+  @spec close(pid) :: :ok
   def close(connection_pid) do
     GenServer.cast(connection_pid, :close)
   end
 
   @doc false
-  @spec get_weight(connection_pid :: pid) :: non_neg_integer | :full
+  @spec get_weight(pid) :: non_neg_integer | :full
   def get_weight(connection_pid) do
     GenServer.call(connection_pid, :get_weight)
   end
@@ -101,7 +99,7 @@ defmodule ExRabbitMQ.Connection do
     Process.send(self(), :connect, [])
     schedule_cleanup(cleanup_after)
 
-    {:ok, %@name{config: config, ets_consumers: ets_consumers}}
+    {:ok, %__MODULE__{config: config, ets_consumers: ets_consumers}}
   end
 
   @impl true

@@ -4,8 +4,8 @@ defmodule ExRabbitMQ.Mixfile do
   def project do
     [
       app: :exrabbitmq,
-      version: "3.0.0-pre.2",
-      elixir: "~> 1.6",
+      version: "3.0.1",
+      elixir: "~> 1.7",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -19,7 +19,11 @@ defmodule ExRabbitMQ.Mixfile do
 
   def application, do: do_application(Mix.env())
 
-  defp do_application(:test), do: []
+  defp do_application(:test) do
+    [
+      extra_applications: [:logger]
+    ]
+  end
 
   defp do_application(_) do
     [
@@ -29,10 +33,10 @@ defmodule ExRabbitMQ.Mixfile do
 
   defp deps do
     [
-      {:amqp, "~> 1.0"},
-      {:credo, "~> 0.10.2", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 0.5.1", only: [:dev], runtime: false},
-      {:ex_doc, "~> 0.19.1", only: [:dev], runtime: false},
+      {:amqp, "~> 1.1"},
+      {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.4", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.19.3", only: :dev, runtime: false},
       {:poolboy, github: "StoiximanServices/poolboy", branch: "weighted_strategy"}
     ]
   end

@@ -22,5 +22,9 @@ erl_crash.dump
 # Ignore ElixirLS artifacts
 .elixir_ls
 
+# Ignore secret configurations except the template.
+/config/*.secrets.exs
+!/config/.secrets.exs
+
 .vscode
 log
