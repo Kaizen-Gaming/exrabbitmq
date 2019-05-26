@@ -68,7 +68,7 @@ defmodule ExRabbitMQ.Config.Connection do
   def get(app \\ :exrabbitmq, connection_config) do
     connection_config
     |> case do
-      connection_config when is_atom(connection_config) -> from_env(app, connection_config)
+      connection_config when is_atom(connection_config) -> from_app_env(app, connection_config)
       _ -> connection_config
     end
     |> merge_defaults()
@@ -88,16 +88,18 @@ defmodule ExRabbitMQ.Config.Connection do
   # Returns a part of the `app` configuration section, specified with the
   # `key` argument as a `ExRabbitMQ.Config.Connection` struct.
   # If the `app` argument is omitted, it defaults to `:exrabbitmq`.
-  @spec from_env(atom, atom | module) :: t()
-  defp from_env(app, key) do
+  # For every required configuration property, we first try to retrieve its value
+  # from an environment variable.
+  @spec from_app_env(atom, atom | module) :: t()
+  defp from_app_env(app, key) do
     config = Application.get_env(app, key, [])
 
     %__MODULE__{
-      username: config[:username],
-      password: config[:password],
-      host: config[:host],
-      port: config[:port],
-      vhost: config[:vhost],
+      username: from_sys_env(:username) || config[:username],
+      password: from_sys_env(:password) || config[:password],
+      host: from_sys_env(:host) || config[:host],
+      port: from_sys_env(:port, :integer) || config[:port],
+      vhost: from_sys_env(:vhost) || config[:vhost],
       heartbeat: config[:heartbeat],
       reconnect_after: config[:reconnect_after],
       max_channels: config[:max_channels],
@@ -105,6 +107,33 @@ defmodule ExRabbitMQ.Config.Connection do
       cleanup_after: config[:cleanup_after]
     }
   end
+
+  # Constructs an environment variable name from the passed atom
+  # and tries to get its value.
+  @spec from_sys_env(atom) :: String.t() | nil
+  defp from_sys_env(key) when is_atom(key) do
+    key = key |> Atom.to_string() |> String.upcase()
+    key = "EXRABBITMQ_CONNECTION_#{key}"
+
+    System.get_env(key)
+  end
+
+  # With arity 2, this function deals with 3 cases:
+  #   1. When the `key` is an atom, it's considered to be a configuration option name
+  #     as set in one of the application's configuration files.
+  #   2. When it's a binary, it's considered to be a value read from an environment variable,
+  #     in which case, the value is formatted as per the type atom passed as the second argument
+  #     to the function.
+  #   3. If the environment variable is not set then nil is returned.
+  @spec from_sys_env(atom | String.t() | nil, atom) :: String.t() | nil
+  defp from_sys_env(key, type)
+
+  defp from_sys_env(key, type) when is_atom(key) and key !== nil and is_atom(type) do
+    key |> from_sys_env() |> from_sys_env(type)
+  end
+
+  defp from_sys_env(<<>> <> val, :integer), do: val |> Integer.parse() |> elem(0)
+  defp from_sys_env(val, _), do: val
 
   # Merges an existing `ExRabbitMQ.Config.Connection` struct the default values when these are `nil`.
   defp merge_defaults(%__MODULE__{} = config) do
