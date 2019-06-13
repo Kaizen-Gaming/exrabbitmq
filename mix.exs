@@ -34,9 +34,9 @@ defmodule ExRabbitMQ.Mixfile do
   defp deps do
     [
       {:amqp, "~> 1.1"},
-      {:credo, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.4", only: :dev, runtime: false},
-      {:ex_doc, "~> 0.19.3", only: :dev, runtime: false},
+      {:credo, "~> 1.1", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.6", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.20.2", only: :dev, runtime: false},
       {:poolboy, github: "StoiximanServices/poolboy", branch: "weighted_strategy"}
     ]
   end
