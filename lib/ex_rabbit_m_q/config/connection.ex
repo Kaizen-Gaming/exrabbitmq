@@ -85,6 +85,11 @@ defmodule ExRabbitMQ.Config.Connection do
     {key, connection_config}
   end
 
+  @spec get_weight_timeout() :: pos_integer | :infinity
+  def get_weight_timeout() do
+    Application.get_env(:exrabbitmq, :get_weight_timeout, :infinity)
+  end
+
   # Returns a part of the `app` configuration section, specified with the
   # `key` argument as a `ExRabbitMQ.Config.Connection` struct.
   # If the `app` argument is omitted, it defaults to `:exrabbitmq`.

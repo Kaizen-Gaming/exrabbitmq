@@ -88,7 +88,9 @@ defmodule ExRabbitMQ.Connection do
   @doc false
   @spec get_weight(pid) :: non_neg_integer | :full
   def get_weight(connection_pid) do
-    GenServer.call(connection_pid, :get_weight)
+    timeout = ConnectionConfig.get_weight_timeout()
+
+    GenServer.call(connection_pid, :get_weight, timeout)
   end
 
   @impl true
