@@ -27,13 +27,13 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
           |> xrmq_open_channel_setup_consume()
           |> xrmq_extract_state()
 
-        state = xqrm_on_connection_open(connection, state)
+        state = xrmq_on_connection_open(connection, state)
 
         {:noreply, state}
       end
 
       def handle_info({:xrmq_connection, {:closed, _}}, state) do
-        state = xqrm_on_connection_closed(state)
+        state = xrmq_on_connection_closed(state)
 
         # WE WILL CONTINUE HANDLING THIS EVENT WHEN WE HANDLE THE CHANNEL DOWN EVENT
 

@@ -14,9 +14,9 @@ defmodule ExRabbitMQ.AST.Common do
   @callback xrmq_session_setup(AMQP.Channel.t(), atom | ExRabbitMQ.Config.Session.t(), term) ::
               result
 
-  @callback xqrm_on_connection_open(AMQP.Connection.t(), term) :: term
+  @callback xrmq_on_connection_open(AMQP.Connection.t(), term) :: term
 
-  @callback xqrm_on_connection_closed(term) :: term
+  @callback xrmq_on_connection_closed(term) :: term
 
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.
@@ -135,9 +135,9 @@ defmodule ExRabbitMQ.AST.Common do
         end)
       end
 
-      def xqrm_on_connection_open(%AMQP.Connection{} = _connection, state), do: state
+      def xrmq_on_connection_open(%AMQP.Connection{} = _connection, state), do: state
 
-      def xqrm_on_connection_closed(state), do: state
+      def xrmq_on_connection_closed(state), do: state
 
       defp xrmq_declare(channel, {:queue, queue_config}) do
         with {:ok, %{queue: queue} = queue_info} <- xrmq_queue_declare(channel, queue_config),
@@ -202,8 +202,8 @@ defmodule ExRabbitMQ.AST.Common do
       defoverridable xrmq_session_setup: 3,
                      xrmq_channel_setup: 2,
                      xrmq_channel_open: 2,
-                     xqrm_on_connection_open: 2,
-                     xqrm_on_connection_closed: 1
+                     xrmq_on_connection_open: 2,
+                     xrmq_on_connection_closed: 1
     end
   end
 end
