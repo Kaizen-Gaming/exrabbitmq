@@ -141,15 +141,21 @@ defmodule ExRabbitMQ.Producer do
       end
 
       def xrmq_open_channel_setup(state) do
-        with {:ok, state} <- xrmq_open_channel(state) do
-          {channel, _} = XRMQState.get_channel_info()
-          session_config = XRMQState.get_session_config()
+        case xrmq_open_channel(state) do
+          {:ok, state} ->
+            {channel, _} = XRMQState.get_channel_info()
+            session_config = XRMQState.get_session_config()
 
-          xrmq_session_setup(channel, session_config, state)
-        else
-          {:error, _reason, _state} = error -> error
-          {:error, reason} -> {:error, reason, state}
-          error -> {:error, error, state}
+            xrmq_session_setup(channel, session_config, state)
+
+          {:error, _reason, _state} = error ->
+            error
+
+          {:error, reason} ->
+            {:error, reason, state}
+
+          error ->
+            {:error, error, state}
         end
       end
 

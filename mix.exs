@@ -4,11 +4,11 @@ defmodule ExRabbitMQ.Mixfile do
   def project do
     [
       app: :exrabbitmq,
-      version: "3.1.1",
+      version: "3.1.2",
       elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
-      build_embedded: Mix.env() == :prod,
-      start_permanent: Mix.env() == :prod,
+      build_embedded: Mix.env() not in [:dev, :test],
+      start_permanent: Mix.env() not in [:dev, :test],
       deps: deps()
     ]
     |> Keyword.merge(package())

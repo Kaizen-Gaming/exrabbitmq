@@ -81,8 +81,8 @@ defmodule ExRabbitMQ.AST.Common do
 
       defp xrmq_connection_setup(connection_config) do
         with {:ok, conn_pid} <- XRMQConnection.get_subscribe(connection_config),
-             true <- Process.link(conn_pid),
-             {:ok, channel_ripper_pid} = XRMQChannelRipper.start() do
+             true <- Process.link(conn_pid) do
+          {:ok, channel_ripper_pid} = XRMQChannelRipper.start()
           XRMQState.set_connection_pid(conn_pid)
           XRMQState.set_connection_config(connection_config)
           XRMQState.set_channel_ripper_pid(channel_ripper_pid)
