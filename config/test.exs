@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :exrabbitmq, :test_different_connections,
   reconnect_after: 500,

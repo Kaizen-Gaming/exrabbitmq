@@ -250,11 +250,13 @@ defmodule ExRabbitMQ.Consumer do
         connection_config = XRMQConnectionConfig.get(connection_config)
         session_config = XRMQSessionConfig.get(session_config)
 
-        with :ok <- xrmq_connection_setup(connection_config) do
-          XRMQState.set_session_config(session_config)
-          xrmq_open_channel_setup_consume(start_consuming, state)
-        else
-          {:error, reason} -> {:error, reason, state}
+        case xrmq_connection_setup(connection_config) do
+          :ok ->
+            XRMQState.set_session_config(session_config)
+            xrmq_open_channel_setup_consume(start_consuming, state)
+
+          {:error, reason} ->
+            {:error, reason, state}
         end
       end
 
@@ -284,9 +286,8 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       def xrmq_consume(channel, queue, consume_opts, state) do
-        with {:ok, _} <- AMQP.Basic.consume(channel, queue, nil, consume_opts) do
-          {:ok, state}
-        else
+        case AMQP.Basic.consume(channel, queue, nil, consume_opts) do
+          {:ok, _} -> {:ok, state}
           {:error, reason} -> {:error, reason, state}
         end
       end

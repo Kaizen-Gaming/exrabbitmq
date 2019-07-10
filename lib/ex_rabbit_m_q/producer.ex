@@ -130,11 +130,13 @@ defmodule ExRabbitMQ.Producer do
         connection_config = XRMQConnectionConfig.get(connection_config)
         session_config = XRMQSessionConfig.get(session_config)
 
-        with :ok <- xrmq_connection_setup(connection_config) do
-          XRMQState.set_session_config(session_config)
-          xrmq_open_channel_setup(state)
-        else
-          {:error, reason} -> {:error, reason, state}
+        case xrmq_connection_setup(connection_config) do
+          :ok ->
+            XRMQState.set_session_config(session_config)
+            xrmq_open_channel_setup(state)
+
+          {:error, reason} ->
+            {:error, reason, state}
         end
       end
 
