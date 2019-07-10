@@ -4,7 +4,7 @@ defmodule ExRabbitMQ.Mixfile do
   def project do
     [
       app: :exrabbitmq,
-      version: "3.1.2",
+      version: "3.1.3",
       elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() not in [:dev, :test],
