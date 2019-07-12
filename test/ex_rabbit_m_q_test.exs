@@ -48,7 +48,7 @@ defmodule ExRabbitMQTest do
     consumers |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
     producers |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
 
-    PoolSupervisor.stop_pools()
+    PoolSupervisor.stop()
   end
 
   @tag :two
@@ -78,10 +78,10 @@ defmodule ExRabbitMQTest do
     producer_1 |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
     consumer_2 |> Map.get(:monitors) |> Enum.each(&TestHelper.assert_stop(&1))
 
-    PoolSupervisor.stop_pools()
+    PoolSupervisor.stop()
   end
 
-  defp create(number, producer_or_consumer, opts \\ @defaults) do
+  defp create(number, producer_or_consumer, opts) do
     opts =
       @defaults
       |> Map.merge(opts)

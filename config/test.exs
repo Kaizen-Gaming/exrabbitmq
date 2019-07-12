@@ -17,7 +17,7 @@ config :exrabbitmq, :test_basic_session,
     {:queue,
      [
        name: "queue_a",
-       queue_opts: [],
+       queue_opts: [auto_delete: true],
        bindings: []
      ]}
   ]

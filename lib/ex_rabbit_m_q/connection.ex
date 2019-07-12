@@ -82,7 +82,7 @@ defmodule ExRabbitMQ.Connection do
   """
   @spec close(pid) :: :ok
   def close(connection_pid) do
-    GenServer.cast(connection_pid, :close)
+    GenServer.call(connection_pid, :close, :infinity)
   end
 
   @doc false
@@ -137,18 +137,18 @@ defmodule ExRabbitMQ.Connection do
   end
 
   @impl true
-  def handle_cast(:close, state) do
+  def handle_call(:close, _from, state) do
     %{ets_consumers: ets_consumers, connection: connection, connection_pid: connection_pid} =
       state
 
     if connection === nil do
-      {:stop, :normal, state}
+      {:reply, :ok, state, {:continue, :close}}
     else
       cleanup_connection(connection_pid, connection)
       PubSub.publish(ets_consumers, {:xrmq_connection, {:closed, nil}})
       new_state = %{state | connection: nil, connection_pid: nil}
 
-      {:stop, :normal, new_state}
+      {:reply, :ok, new_state, {:continue, :close}}
     end
   end
 
@@ -239,6 +239,11 @@ defmodule ExRabbitMQ.Connection do
   @impl true
   def handle_info(_, state) do
     {:noreply, state}
+  end
+
+  @impl true
+  def handle_continue(:close, state) do
+    {:stop, :normal, state}
   end
 
   defp subscribe(pool_pid, connection_config) do

@@ -11,13 +11,6 @@ defmodule ExRabbitMQ.AST.Common do
 
   @type basic_publish_result :: :ok | {:error, :blocked | :closing | :no_channel}
 
-  @callback xrmq_session_setup(AMQP.Channel.t(), atom | ExRabbitMQ.Config.Session.t(), term) ::
-              result
-
-  @callback xrmq_on_connection_open(AMQP.Connection.t(), term) :: term
-
-  @callback xrmq_on_connection_closed(term) :: term
-
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.
   Specifically, it holds getters and setters, using the process dictionary, to hold important information such as the channel
@@ -122,6 +115,17 @@ defmodule ExRabbitMQ.AST.Common do
         end
       end
 
+      def xrmq_channel_close(state) do
+        with {:channel, {channel, _}} when channel !== nil <-
+               {:channel, XRMQState.get_channel_info()},
+             :ok <- AMQP.Channel.close(channel) do
+          {:ok, state}
+        else
+          {:channel, {nil, _}} -> {:error, :nil_channel, state}
+          {:error, reason} -> {:error, reason, state}
+        end
+      end
+
       def xrmq_session_setup(nil, _session_config, _state), do: {:error, :nil_channel}
       def xrmq_session_setup(_channel, nil, _state), do: {:error, :nil_session_config}
 
@@ -139,6 +143,13 @@ defmodule ExRabbitMQ.AST.Common do
 
       def xrmq_on_connection_closed(state), do: state
 
+      defp xrmq_declare(channel, {:exchange, exchange_config}) do
+        with :ok <- xrmq_exchange_declare(channel, exchange_config),
+             :ok <- xrmq_exchange_bindings(channel, exchange_config) do
+          {:ok, nil}
+        end
+      end
+
       defp xrmq_declare(channel, {:queue, queue_config}) do
         with {:ok, %{queue: queue} = queue_info} <- xrmq_queue_declare(channel, queue_config),
              :ok <- xrmq_queue_bindings(queue, channel, queue_config) do
@@ -146,9 +157,17 @@ defmodule ExRabbitMQ.AST.Common do
         end
       end
 
-      defp xrmq_declare(channel, {:exchange, exchange_config}) do
-        with :ok <- xrmq_exchange_declare(channel, exchange_config),
-             :ok <- xrmq_exchange_bindings(channel, exchange_config) do
+      defp xrmq_declare(
+             channel,
+             {:bind, %XRMQBindConfig{type: :exchange, name: name} = bind_config}
+           ) do
+        with :ok <- xrmq_exchange_bind(channel, name, bind_config) do
+          {:ok, nil}
+        end
+      end
+
+      defp xrmq_declare(channel, {:bind, %XRMQBindConfig{type: :queue, name: name} = bind_config}) do
+        with :ok <- xrmq_queue_bind(channel, name, bind_config) do
           {:ok, nil}
         end
       end
@@ -186,22 +205,22 @@ defmodule ExRabbitMQ.AST.Common do
       end
 
       defp xrmq_queue_bindings(queue, channel, %XRMQQueueConfig{bindings: bindings}) do
-        bindings
-        |> Enum.reduce_while(:ok, fn binding, acc ->
-          case xrmq_queue_bind(queue, channel, binding) do
+        Enum.reduce_while(bindings, :ok, fn binding, acc ->
+          case xrmq_queue_bind(channel, queue, binding) do
             :ok -> {:cont, acc}
             error -> {:halt, error}
           end
         end)
       end
 
-      defp xrmq_queue_bind(queue, channel, %XRMQBindConfig{exchange: exchange, opts: opts}) do
+      defp xrmq_queue_bind(channel, queue, %XRMQBindConfig{exchange: exchange, opts: opts}) do
         AMQP.Queue.bind(channel, queue, exchange, opts)
       end
 
       defoverridable xrmq_session_setup: 3,
                      xrmq_channel_setup: 2,
                      xrmq_channel_open: 2,
+                     xrmq_channel_close: 1,
                      xrmq_on_connection_open: 2,
                      xrmq_on_connection_closed: 1
     end

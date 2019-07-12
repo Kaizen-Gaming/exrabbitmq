@@ -30,10 +30,10 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
 
     child_spec = %{
       id: hash_key,
-      start: {Pool, :start, [hash_key, connection_config]}
-      # restart: :transient,
-      # shutdown: 5000,
-      # type: :worker
+      start: {Pool, :start, [hash_key, connection_config]},
+      restart: :transient,
+      shutdown: :infinity,
+      type: :worker
     }
 
     DynamicSupervisor.start_child(__MODULE__, child_spec)
@@ -43,7 +43,7 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def stop_pools() do
+  def stop() do
     RegistryPool.unlink_stop()
 
     __MODULE__
@@ -52,7 +52,8 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
     |> Enum.reduce([], fn x, acc -> [elem(x, 1) | acc] end)
     |> Enum.each(fn x ->
       Process.unlink(x)
-      :poolboy.stop(x)
+
+      Pool.stop(x)
     end)
   end
 end

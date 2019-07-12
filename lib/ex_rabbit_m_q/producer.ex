@@ -44,8 +44,8 @@ defmodule ExRabbitMQ.Producer do
   ```
   """
 
-  alias ExRabbitMQ.AST.Common, as: C
-  alias ExRabbitMQ.Config.Session
+  alias ExRabbitMQ.AST.Common, as: CommonAST
+  alias ExRabbitMQ.Config.SessionConfig, as: SessionConfig
 
   require ExRabbitMQ.AST.Common
   require ExRabbitMQ.AST.Producer.GenServer
@@ -64,7 +64,12 @@ defmodule ExRabbitMQ.Producer do
     For more information on how to configure the connection, check `ExRabbitMQ.Config.Connection`.
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_init(C.connection(), atom | Session.t(), term) :: C.result()
+  @callback xrmq_init(CommonAST.connection(), atom | SessionConfig.t(), term) ::
+              CommonAST.result()
+
+  @doc false
+  @callback xrmq_session_setup(AMQP.Channel.t(), atom | SessionConfig.t(), term) ::
+              Common.result()
 
   @doc """
   Returns a part of the `:exrabbitmq` configuration section, specified with the
@@ -91,7 +96,7 @@ defmodule ExRabbitMQ.Producer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_setup(AMQP.Channel.t(), term) :: C.result()
+  @callback xrmq_channel_setup(AMQP.Channel.t(), term) :: CommonAST.result()
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened,
@@ -99,7 +104,7 @@ defmodule ExRabbitMQ.Producer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_open(AMQP.Channel.t(), term) :: C.result()
+  @callback xrmq_channel_open(AMQP.Channel.t(), term) :: CommonAST.result()
 
   @doc """
   This overridable function publishes the **binary** `payload` to the `exchange` using the provided `routing_key`.
@@ -107,12 +112,27 @@ defmodule ExRabbitMQ.Producer do
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
   @callback xrmq_basic_publish(String.t(), String.t(), String.t(), [term]) ::
-              C.basic_publish_result()
+              CommonAST.basic_publish_result()
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.
   """
   @callback xrmq_extract_state({:ok, term} | {:error, term, term}) :: state :: term
+
+  @doc """
+  This overridable hook is  called when an already established connection has just been re-established.
+
+  It is passed the connection struct and the wrapper process's state is passed in to allow the callback
+  to mutate it if overriden.
+  """
+  @callback xrmq_on_connection_open(AMQP.Connection.t(), term) :: term
+
+  @doc """
+  This overridable hook is  called when an already established connection is dropped.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_on_connection_closed(term) :: term
 
   defmacro __using__(_) do
     common_ast = ExRabbitMQ.AST.Common.ast()

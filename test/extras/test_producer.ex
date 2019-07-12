@@ -1,6 +1,7 @@
 defmodule TestProducer do
   @module __MODULE__
 
+  use GenServer, restart: :transient
   use ExRabbitMQ.Producer, GenServer
 
   def start_link(state) do
@@ -12,13 +13,17 @@ defmodule TestProducer do
   end
 
   def stop(producer_pid) do
-    GenServer.cast(producer_pid, :stop)
+    GenServer.call(producer_pid, :stop)
   end
 
   def init(state) do
     GenServer.cast(self(), :init)
 
     {:ok, state}
+  end
+
+  def handle_call(:stop, _from, state) do
+    {:reply, :ok, state, {:continue, :stop}}
   end
 
   def handle_cast(:init, state) do
@@ -47,10 +52,6 @@ defmodule TestProducer do
     {:noreply, new_state}
   end
 
-  def handle_cast(:stop, state) do
-    {:stop, :normal, state}
-  end
-
   def handle_cast({:publish, test_message}, state) do
     %{tester_pid: tester_pid, session_config: session_config} = state
 
@@ -66,6 +67,12 @@ defmodule TestProducer do
 
   def handle_info(_, state) do
     {:noreply, state}
+  end
+
+  def handle_continue(:stop, state) do
+    xrmq_channel_close(state)
+
+    {:stop, :normal, state}
   end
 
   # optional override when there is a need to do setup the channel right after the connection has been established.

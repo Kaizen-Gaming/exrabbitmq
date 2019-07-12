@@ -1,8 +1,11 @@
 defmodule ExRabbitMQ.Config.Session do
   @moduledoc """
-  A structure holding the necessary information about a queue that is to be consumed.
+  A structure holding the necessary information about a binding of an exchange or queue
+  which is not otherwise declared by the application.
 
-  #### Queue configuration example:
+  This entity must exist prior to trying to bind it.
+
+  #### Bind configuration example:
 
   ```elixir
   # :queue is this queue's configuration name
@@ -44,7 +47,7 @@ defmodule ExRabbitMQ.Config.Session do
 
     # the options to use for specifying QoS properties on a channel (optional, default: [])
     qos_opts: [
-      prefect_size: 1,
+      prefetch_size: 1,
       prefetch_count: 1,
       global: true
     ],
@@ -85,8 +88,7 @@ defmodule ExRabbitMQ.Config.Session do
   end
 
   def validate_bindings(%{bindings: bindings} = config) do
-    bindings
-    |> Enum.reduce_while(config, fn
+    Enum.reduce_while(bindings, config, fn
       binding, %XRMQBindConfig{exchange: nil} ->
         raise ArgumentError, "invalid source exchange: #{inspect(binding)}"
 
@@ -117,10 +119,10 @@ defmodule ExRabbitMQ.Config.Session do
   end
 
   defp get_declarations(declarations) do
-    declarations
-    |> Enum.map(fn
+    Enum.map(declarations, fn
       {:exchange, config} -> {:exchange, XRMQExchangeConfig.get(config)}
       {:queue, config} -> {:queue, XRMQQueueConfig.get(config)}
+      {:bind, config} -> {:bind, XRMQBindConfig.get(config)}
       declaration -> raise ArgumentError, "invalid declaration #{inspect(declaration)}"
     end)
   end

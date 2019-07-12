@@ -60,7 +60,8 @@ defmodule ExRabbitMQ.Consumer do
   ```
   """
 
-  alias ExRabbitMQ.AST.Common, as: C
+  alias ExRabbitMQ.AST.Common, as: CommonAST
+  alias ExRabbitMQ.Config.Session, as: SessionConfig
 
   require ExRabbitMQ.AST.Common
   require ExRabbitMQ.AST.Consumer.GenServer
@@ -94,10 +95,15 @@ defmodule ExRabbitMQ.Consumer do
     been established successfully. *Optional: Defaults to `true`.*
   * `state` - The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_init(C.connection(), C.queue(), boolean, term) :: C.result()
+  @callback xrmq_init(CommonAST.connection(), CommonAST.queue(), boolean, term) ::
+              CommonAST.result()
 
   @doc false
   @callback xrmq_open_channel_setup_consume(term, boolean) :: {:ok, term} | {:error, term, term}
+
+  @doc false
+  @callback xrmq_session_setup(AMQP.Channel.t(), atom | SessionConfig.t(), term) ::
+              CommonAST.result()
 
   @doc """
   Returns a part of the `:exrabbitmq` configuration section, specified with the `key` argument.
@@ -133,7 +139,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_setup(AMQP.Channel.t(), term) :: C.result()
+  @callback xrmq_channel_setup(AMQP.Channel.t(), term) :: CommonAST.result()
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened,
@@ -141,7 +147,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_channel_open(AMQP.Channel.t(), term) :: C.result()
+  @callback xrmq_channel_open(AMQP.Channel.t(), term) :: CommonAST.result()
 
   @doc """
   This hook is called automatically, if `start_consuming` was `true` when `c:xrmq_init/4`.
@@ -157,7 +163,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_consume(term) :: C.result()
+  @callback xrmq_consume(term) :: CommonAST.result()
 
   @doc """
   This hook is called automatically as part of the flow in `c:xrmq_consume/1`.
@@ -196,7 +202,7 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_ack(String.t(), term) :: C.result()
+  @callback xrmq_basic_ack(String.t(), term) :: CommonAST.result()
 
   @doc """
   This overridable function can be called whenever `no_ack` is set to `false` and the user wants
@@ -209,19 +215,35 @@ defmodule ExRabbitMQ.Consumer do
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_reject(String.t(), term, term) :: C.result()
+  @callback xrmq_basic_reject(String.t(), term, term) :: CommonAST.result()
 
   @doc """
   This overridable function publishes the `payload` to the `exchange` using the provided `routing_key`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
-  @callback xrmq_basic_publish(term, String.t(), String.t(), [term]) :: C.basic_publish_result()
+  @callback xrmq_basic_publish(term, String.t(), String.t(), [term]) ::
+              CommonAST.basic_publish_result()
 
   @doc """
   Helper function that extracts the `state` argument from the passed in tuple.
   """
   @callback xrmq_extract_state({:ok, term} | {:error, term, term}) :: term
+
+  @doc """
+  This overridable hook is  called when an already established connection has just been re-established.
+
+  It is passed the connection struct and the wrapper process's state is passed in to allow the callback
+  to mutate it if overriden.
+  """
+  @callback xrmq_on_connection_open(AMQP.Connection.t(), term) :: term
+
+  @doc """
+  This overridable hook is  called when an already established connection is dropped.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_on_connection_closed(term) :: term
 
   # credo:disable-for-next-line
   defmacro __using__({:__aliases__, _, [kind]})

@@ -1,6 +1,7 @@
 defmodule TestConsumer do
   @module __MODULE__
 
+  use GenServer, restart: :transient
   use ExRabbitMQ.Consumer, GenServer
 
   def start_link(state) do
@@ -8,13 +9,17 @@ defmodule TestConsumer do
   end
 
   def stop(consumer_pid) do
-    GenServer.cast(consumer_pid, :stop)
+    GenServer.call(consumer_pid, :stop)
   end
 
   def init(state) do
     GenServer.cast(self(), :init)
 
     {:ok, state}
+  end
+
+  def handle_call(:stop, _from, state) do
+    {:reply, :ok, state, {:continue, :stop}}
   end
 
   def handle_cast(:init, state) do
@@ -42,12 +47,14 @@ defmodule TestConsumer do
     {:noreply, new_state}
   end
 
-  def handle_cast(:stop, state) do
-    {:stop, :normal, state}
-  end
-
   def handle_info(_, state) do
     {:noreply, state}
+  end
+
+  def handle_continue(:stop, state) do
+    xrmq_channel_close(state)
+
+    {:stop, :normal, state}
   end
 
   # required override
