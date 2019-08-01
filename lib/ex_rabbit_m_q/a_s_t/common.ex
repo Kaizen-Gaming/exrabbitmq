@@ -194,7 +194,7 @@ defmodule ExRabbitMQ.AST.Common do
         AMQP.Exchange.bind(channel, destination, source, opts)
       end
 
-      defp xrmq_queue_declare(channel, %XRMQQueueConfig{name: name, opts: opts} = a)
+      defp xrmq_queue_declare(channel, %XRMQQueueConfig{name: name, opts: opts})
            when is_binary(name) do
         session_config = XRMQState.get_session_config()
 

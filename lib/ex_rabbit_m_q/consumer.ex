@@ -289,6 +289,8 @@ defmodule ExRabbitMQ.Consumer do
              {channel, _} <- XRMQState.get_channel_info(),
              session_config <- XRMQState.get_session_config(),
              {:ok, state} <- xrmq_session_setup(channel, session_config, state),
+             # get the session_config again because it may have changed (eg, by using an anonymous queue)
+             session_config <- XRMQState.get_session_config(),
              {:ok, state} <- xrmq_qos_setup(channel, session_config.qos_opts, state) do
           if start_consuming,
             do: xrmq_consume(channel, session_config.queue, session_config.consume_opts, state),
