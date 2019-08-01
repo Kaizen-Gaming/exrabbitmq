@@ -7,6 +7,7 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
   use DynamicSupervisor
 
   alias ExRabbitMQ.Config.Connection, as: ConnectionConfig
+  alias ExRabbitMQ.Config.Environment, as: XRMQEnvironmentConfig
   alias ExRabbitMQ.Connection.Pool
   alias ExRabbitMQ.Connection.Pool.Registry, as: RegistryPool
 
@@ -15,6 +16,8 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
   """
   @spec start_link(term) :: Supervisor.on_start()
   def start_link(args) do
+    XRMQEnvironmentConfig.validate()
+
     DynamicSupervisor.start_link(__MODULE__, args, name: __MODULE__)
   end
 

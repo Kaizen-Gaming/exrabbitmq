@@ -47,11 +47,9 @@ defmodule ExRabbitMQ.Connection.PubSub do
     tid
     |> :ets.select([{:_, [], [:"$_"]}])
     |> Enum.split_with(fn {pid} ->
-      if Process.alive?(pid) do
-        send(pid, message)
-      else
-        unsubscribe(tid, pid)
-      end
+      if Process.alive?(pid),
+        do: send(pid, message),
+        else: unsubscribe(tid, pid)
     end)
 
     :ok

@@ -9,7 +9,7 @@ defmodule ExRabbitMQ.AST.Common do
 
   @type result :: {:ok, term} | {:error, term, term}
 
-  @type basic_publish_result :: :ok | {:error, :blocked | :closing | :no_channel}
+  @type basic_publish_result :: {:ok | {:error, :blocked | :closing | :no_channel}, boolean}
 
   @doc """
   Produces the common part of the AST for both the consumer and producer behaviours.
@@ -22,12 +22,19 @@ defmodule ExRabbitMQ.AST.Common do
     quote location: :keep do
       alias ExRabbitMQ.ChannelRipper, as: XRMQChannelRipper
       alias ExRabbitMQ.Config.Bind, as: XRMQBindConfig
+      alias ExRabbitMQ.Config.Environment, as: XRMQEnvironmentConfig
       alias ExRabbitMQ.Config.Exchange, as: XRMQExchangeConfig
       alias ExRabbitMQ.Config.Queue, as: XRMQQueueConfig
       alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
       alias ExRabbitMQ.Connection, as: XRMQConnection
       alias ExRabbitMQ.Constants, as: XRMQConstants
       alias ExRabbitMQ.State, as: XRMQState
+
+      def xrmq_on_try_init(state), do: state
+
+      def xrmq_on_try_init_success(state), do: state
+
+      def xrmq_on_try_init_error(_reason, state), do: state
 
       def xrmq_channel_setup(_channel, state) do
         {:ok, state}
@@ -46,13 +53,13 @@ defmodule ExRabbitMQ.AST.Common do
       def xrmq_basic_publish(payload, exchange, routing_key, opts \\ [])
 
       def xrmq_basic_publish(payload, exchange, routing_key, opts) when is_binary(payload) do
-        with {channel, _} when channel !== nil <- XRMQState.get_channel_info(),
-             :ok <- AMQP.Basic.publish(channel, exchange, routing_key, payload, opts) do
-          :ok
-        else
-          {nil, _} -> {:error, XRMQConstants.no_channel_error()}
-          error -> {:error, error}
-        end
+        xrmq_basic_publish(
+          XRMQState.get_connection_status(),
+          payload,
+          exchange,
+          routing_key,
+          opts
+        )
       end
 
       def xrmq_basic_publish(payload, _exchange, _routing_key, _opts) do
@@ -61,59 +68,6 @@ defmodule ExRabbitMQ.AST.Common do
 
       def xrmq_extract_state({:ok, state}), do: state
       def xrmq_extract_state({:error, _, state}), do: state
-
-      @deprecated "Use ExRabbitMQ.Config.Connection.from_env/2 or ExRabbitMQ.Config.Session.from_env/2 instead"
-      def xrmq_get_env_config(key) do
-        Application.get_env(:exrabbitmq, key)
-      end
-
-      @deprecated "Use ExRabbitMQ.State.get_connection_config/0 instead"
-      def xrmq_get_connection_config do
-        XRMQState.get_connection_config()
-      end
-
-      defp xrmq_connection_setup(connection_config) do
-        with {:ok, conn_pid} <- XRMQConnection.get_subscribe(connection_config),
-             true <- Process.link(conn_pid) do
-          {:ok, channel_ripper_pid} = XRMQChannelRipper.start()
-          XRMQState.set_connection_pid(conn_pid)
-          XRMQState.set_connection_config(connection_config)
-          XRMQState.set_channel_ripper_pid(channel_ripper_pid)
-          :ok
-        else
-          nil -> {:error, :nil_connection_pid}
-          {:error, _} = error -> error
-          error -> {:error, error}
-        end
-      end
-
-      defp xrmq_open_channel(state) do
-        case XRMQConnection.get(XRMQState.get_connection_pid()) do
-          {:ok, connection} ->
-            case AMQP.Channel.open(connection) do
-              {:ok, %AMQP.Channel{pid: pid} = channel} ->
-                XRMQChannelRipper.set_channel(XRMQState.get_channel_ripper_pid(), channel)
-                channel_monitor = Process.monitor(pid)
-                XRMQState.set_channel_info(channel, channel_monitor)
-
-                Logger.debug("opened a new channel")
-
-                with {:ok, state} <- xrmq_channel_setup(channel, state) do
-                  xrmq_channel_open(channel, state)
-                end
-
-              error ->
-                Logger.error("could not open a new channel: #{inspect(error)}")
-                XRMQState.set_channel_info(nil, nil)
-                Process.exit(self(), {:xrmq_channel_open_error, error})
-
-                {:error, error, state}
-            end
-
-          {:error, reason} ->
-            {:error, reason, state}
-        end
-      end
 
       def xrmq_channel_close(state) do
         with {:channel, {channel, _}} when channel !== nil <-
@@ -139,9 +93,97 @@ defmodule ExRabbitMQ.AST.Common do
         end)
       end
 
-      def xrmq_on_connection_open(%AMQP.Connection{} = _connection, state), do: state
-
       def xrmq_on_connection_closed(state), do: state
+
+      def xrmq_on_connection_reopened(%AMQP.Connection{} = _connection, state), do: state
+
+      def xrmq_on_hibernation_threshold_reached(callback_result), do: callback_result
+
+      def xrmq_flush_buffered_messages(_buffered_messages_count, _buffered_messages, state) do
+        state
+      end
+
+      def xrmq_on_message_buffered(
+            _buffered_messages_count,
+            _payload,
+            _exchange,
+            _routing_key,
+            _opts
+          ) do
+      end
+
+      defp xrmq_try_init_inner(xrmq_init_result, opts) do
+        state = xrmq_init_result |> xrmq_extract_state() |> xrmq_on_try_init()
+
+        case xrmq_init_result do
+          {:ok, state} ->
+            state = xrmq_on_try_init_success(state)
+
+            {:noreply, state}
+
+          {:error, reason, state}
+          when reason in [:nil_connection_pid, :no_available_connection] ->
+            state = xrmq_on_try_init_error(reason, state)
+
+            Process.send_after(
+              self(),
+              {:xrmq_try_init, opts},
+              XRMQEnvironmentConfig.try_init_interval()
+            )
+
+            {:noreply, state}
+
+          {:error, reason, state} ->
+            state = xrmq_on_try_init_error(reason, state)
+
+            {:stop, reason, state}
+        end
+      end
+
+      defp xrmq_connection_setup(connection_config) do
+        with {:ok, conn_pid} <- XRMQConnection.get_subscribe(connection_config),
+             true <- Process.link(conn_pid) do
+          {:ok, channel_ripper_pid} = XRMQChannelRipper.start()
+          XRMQState.set_connection_pid(conn_pid)
+          XRMQState.set_connection_config(connection_config)
+          XRMQState.set_channel_ripper_pid(channel_ripper_pid)
+          :ok
+        else
+          nil -> {:error, :nil_connection_pid}
+          {:error, _} = error -> error
+          error -> {:error, error}
+        end
+      end
+
+      defp xrmq_open_channel(state) do
+        case XRMQConnection.get(XRMQState.get_connection_pid()) do
+          {:ok, connection} ->
+            XRMQState.set_connection_status(:connected)
+
+            case AMQP.Channel.open(connection) do
+              {:ok, %AMQP.Channel{pid: pid} = channel} ->
+                XRMQChannelRipper.set_channel(XRMQState.get_channel_ripper_pid(), channel)
+                channel_monitor = Process.monitor(pid)
+                XRMQState.set_channel_info(channel, channel_monitor)
+
+                Logger.debug("opened a new channel")
+
+                with {:ok, state} <- xrmq_channel_setup(channel, state) do
+                  xrmq_channel_open(channel, state)
+                end
+
+              error ->
+                Logger.error("could not open a new channel: #{inspect(error)}")
+                XRMQState.set_channel_info(nil, nil)
+                Process.exit(self(), {:xrmq_channel_open_error, error})
+
+                {:error, error, state}
+            end
+
+          {:error, reason} ->
+            {:error, reason, state}
+        end
+      end
 
       defp xrmq_declare(channel, {:exchange, exchange_config}) do
         with :ok <- xrmq_exchange_declare(channel, exchange_config),
@@ -197,6 +239,7 @@ defmodule ExRabbitMQ.AST.Common do
       defp xrmq_queue_declare(channel, %XRMQQueueConfig{opts: opts} = config) do
         session_config = XRMQState.get_session_config()
         name = XRMQQueueConfig.get_queue_name(config)
+
         with queue = {:ok, %{queue: new_name}} <- AMQP.Queue.declare(channel, name, opts) do
           XRMQState.set_session_config(%XRMQSessionConfig{session_config | queue: new_name})
           queue
@@ -216,12 +259,63 @@ defmodule ExRabbitMQ.AST.Common do
         AMQP.Queue.bind(channel, queue, exchange, opts)
       end
 
-      defoverridable xrmq_session_setup: 3,
+      defp xrmq_basic_publish(:connected, payload, exchange, routing_key, opts) do
+        if XRMQEnvironmentConfig.accounting_enabled() do
+          payload |> byte_size() |> Kernel./(1_024) |> XRMQState.add_kb_of_messages_seen_so_far()
+        end
+
+        result =
+          with {channel, _} when channel !== nil <- XRMQState.get_channel_info(),
+               :ok <- AMQP.Basic.publish(channel, exchange, routing_key, payload, opts) do
+            :ok
+          else
+            {nil, _} -> {:error, XRMQConstants.no_channel_error()}
+            error -> {:error, error}
+          end
+
+        hibernate? = XRMQEnvironmentConfig.accounting_enabled() and XRMQState.hibernate?()
+
+        {result, hibernate?}
+      end
+
+      defp xrmq_basic_publish(:disconnected, payload, exchange, routing_key, opts) do
+        if XRMQEnvironmentConfig.message_buffering_enabled() do
+          XRMQState.add_buffered_message({payload, exchange, routing_key, opts})
+
+          xrmq_on_message_buffered(
+            XRMQState.get_buffered_messages_count(),
+            payload,
+            exchange,
+            routing_key,
+            opts
+          )
+        end
+
+        {:ok, false}
+      end
+
+      defp xrmq_flush_buffered_messages(state) do
+        case XRMQState.get_clear_buffered_messages() do
+          {0, []} ->
+            state
+
+          {buffered_messages_count, buffered_messages} ->
+            xrmq_flush_buffered_messages(buffered_messages_count, buffered_messages, state)
+        end
+      end
+
+      defoverridable xrmq_on_try_init: 1,
+                     xrmq_on_try_init_success: 1,
+                     xrmq_on_try_init_error: 2,
+                     xrmq_session_setup: 3,
                      xrmq_channel_setup: 2,
                      xrmq_channel_open: 2,
                      xrmq_channel_close: 1,
-                     xrmq_on_connection_open: 2,
-                     xrmq_on_connection_closed: 1
+                     xrmq_on_connection_closed: 1,
+                     xrmq_on_connection_reopened: 2,
+                     xrmq_on_hibernation_threshold_reached: 1,
+                     xrmq_on_message_buffered: 5,
+                     xrmq_flush_buffered_messages: 3
     end
   end
 end

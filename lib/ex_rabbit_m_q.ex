@@ -36,4 +36,42 @@ defmodule ExRabbitMQ do
   1. Run `mix deps.get`, `mix compile` and `mix docs` in `:exrabbitmq`'s root directory
   2. Serve the `doc` folder in `:exrabbitmq`'s root directory with a web server
   """
+
+  alias ExRabbitMQ.Config.Utils, as: XRMQConfigUtils
+
+  # logging
+
+  defdelegate logging_set?(), to: XRMQConfigUtils
+  defdelegate enable_logging(), to: XRMQConfigUtils
+  defdelegate disable_logging(), to: XRMQConfigUtils
+
+  # accounting
+
+  defdelegate accounting_set?(), to: XRMQConfigUtils
+  defdelegate enable_accounting(), to: XRMQConfigUtils
+  defdelegate disable_accounting(), to: XRMQConfigUtils
+
+  # message buffering
+
+  defdelegate message_buffering_set?(), to: XRMQConfigUtils
+  defdelegate enable_message_buffering(), to: XRMQConfigUtils
+  defdelegate disable_message_buffering(), to: XRMQConfigUtils
+
+  # try_init interval
+
+  defdelegate get_try_init_interval(), to: XRMQConfigUtils
+  defdelegate set_try_init_interval(interval), to: XRMQConfigUtils
+
+  # KBs of messages seen so far threshold
+
+  defdelegate get_kb_of_messages_seen_so_far_threshold(), to: XRMQConfigUtils
+  defdelegate set_kb_of_messages_seen_so_far_threshold(threshold), to: XRMQConfigUtils
+
+  # continue_tuple_try_init
+
+  defdelegate continue_tuple_try_init(connection_config, session_config, auto_consume),
+    to: XRMQConfigUtils
+
+  defdelegate continue_tuple_try_init(connection_config, session_config \\ nil),
+    to: XRMQConfigUtils
 end

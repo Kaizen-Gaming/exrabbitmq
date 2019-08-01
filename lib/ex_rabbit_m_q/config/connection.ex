@@ -102,11 +102,10 @@ defmodule ExRabbitMQ.Config.Connection do
   defp from_env(app, key) do
     config = Application.get_env(app, key, [])
 
-    client_props = if is_binary(config[:application_name]) do
-      [{"connection_name", :longstr, config[:application_name]}]
-    else
-      []
-    end
+    client_props =
+      if is_binary(config[:application_name]),
+        do: [{"connection_name", :longstr, config[:application_name]}],
+        else: []
 
     %__MODULE__{
       username: config[:username],
@@ -145,6 +144,7 @@ defmodule ExRabbitMQ.Config.Connection do
       config
     else
       Logger.warn("The maximum number of connections per channel is out of range 1 to 65535.")
+
       %__MODULE__{config | max_channels: 65_535}
     end
   end

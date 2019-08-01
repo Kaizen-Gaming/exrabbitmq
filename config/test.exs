@@ -1,5 +1,11 @@
 import Config
 
+config :exrabbitmq, :accounting_enabled, true
+
+config :exrabbitmq, :message_buffering_enabled, true
+
+config :exrabbitmq, :logging_enabled, true
+
 config :exrabbitmq, :test_different_connections,
   reconnect_after: 500,
   pool: [size: 20, max_overflow: 5]
@@ -48,7 +54,7 @@ config :exrabbitmq, :test_session,
     {:queue,
      [
        name: "queue_a",
-       opts: [],
+       opts: [auto_delete: true],
        bindings: [
          [
            exchange: "foo",

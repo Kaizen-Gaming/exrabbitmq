@@ -62,10 +62,10 @@ defmodule ExRabbitMQ.Consumer do
 
   alias ExRabbitMQ.AST.Common, as: CommonAST
   alias ExRabbitMQ.Config.Session, as: SessionConfig
+  alias ExRabbitMQ.State, as: XRMQState
 
   require ExRabbitMQ.AST.Common
   require ExRabbitMQ.AST.Consumer.GenServer
-  require ExRabbitMQ.AST.Consumer.GenStage
 
   @type callback_result ::
           {:noreply, term}
@@ -98,41 +98,56 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_init(CommonAST.connection(), CommonAST.queue(), boolean, term) ::
               CommonAST.result()
 
+  @doc """
+  This helper function tries to use `c:xrmq_init/4` to set up a connection to RabbitMQ.
+
+  In case that fails, it tries again after a configured interval.
+
+  The interval can be configured by writing:
+
+  ```elixir
+  config :exrabbitmq, :try_init_interval, <THE INTERVAL BETWEEN CONNECTION RETRIES IN MILLISECONDS>
+  ```
+
+  The simplest way to use this is to add the following as part of the `GenServer.init/1` callback result:
+
+  ```elixir
+  ExRabbitMQ.continue_tuple_try_init(connection_config, session_config, true)
+  ```
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_try_init(CommonAST.connection(), CommonAST.queue(), boolean, term) ::
+              CommonAST.result()
+
+  @doc """
+  This overridable callback is called by `c:xrmq_try_init/4` just before a new connection attempt is made.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_on_try_init(term) :: term
+
+  @doc """
+  This overridable callback is called by `c:xrmq_try_init/4` when a new connection has been established.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_on_try_init_success(term) :: term
+
+  @doc """
+  This overridable callback is called by `c:xrmq_try_init/4` when a new connection could not be established.
+
+  The error the occurred as well as the wrapper process's state is passed in to allow the callback to mutate
+  it if overriden.
+  """
+  @callback xrmq_on_try_init_error(term, term) :: term
+
   @doc false
   @callback xrmq_open_channel_setup_consume(term, boolean) :: {:ok, term} | {:error, term, term}
 
   @doc false
   @callback xrmq_session_setup(AMQP.Channel.t(), atom | SessionConfig.t(), term) ::
               CommonAST.result()
-
-  @doc """
-  Returns a part of the `:exrabbitmq` configuration section, specified with the `key` argument.
-
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
-
-  **Deprecated:** Use `ExRabbitMQ.Config.Connection.from_env/2` or `ExRabbitMQ.Config.Session.from_env/2` instead.
-  """
-  @callback xrmq_get_env_config(atom) :: keyword
-
-  @doc """
-  Returns the connection configuration as it was passed to `c:xrmq_init/4`.
-
-  This configuration is set in the wrapper process's dictionary.
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
-
-  **Deprecated:** Use `ExRabbitMQ.State.get_connection_config/0` instead.
-  """
-  @callback xrmq_get_connection_config :: term
-
-  @doc """
-  Returns the queue configuration as it was passed to `c:xrmq_init/4`.
-
-  This configuration is set in the wrapper process's dictionary.
-  For the configuration format see the top section of `ExRabbitMQ.Consumer`.
-
-  **Deprecated:** Use `ExRabbitMQ.State.get_session_config/0` instead.
-  """
-  @callback xrmq_get_session_config :: term
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened.
@@ -236,7 +251,7 @@ defmodule ExRabbitMQ.Consumer do
   It is passed the connection struct and the wrapper process's state is passed in to allow the callback
   to mutate it if overriden.
   """
-  @callback xrmq_on_connection_open(AMQP.Connection.t(), term) :: term
+  @callback xrmq_on_connection_reopened(AMQP.Connection.t(), term) :: term
 
   @doc """
   This overridable hook is  called when an already established connection is dropped.
@@ -245,17 +260,61 @@ defmodule ExRabbitMQ.Consumer do
   """
   @callback xrmq_on_connection_closed(term) :: term
 
-  # credo:disable-for-next-line
-  defmacro __using__({:__aliases__, _, [kind]})
-           when kind in [:GenServer, :GenStage] do
-    common_ast = ExRabbitMQ.AST.Common.ast()
+  @doc """
+  This overridable hook is called when receiving a message and having enabled message size accounting,
+  it is decided that the process should hibernate.
 
-    inner_ast =
-      if kind === :GenStage do
-        ExRabbitMQ.AST.Consumer.GenStage.ast()
-      else
-        ExRabbitMQ.AST.Consumer.GenServer.ast()
-      end
+  Message size accounting (disabled by default) can be enabled by writing:
+
+  ```elixir
+  config :exrabbitmq, :accounting_enabled, true
+  ```
+
+  The configuration option to set the threshold for the message bytes seen so far, in KBs, is set by writing:
+
+  ```elixir
+  config :exrabbitmq, :kb_of_messages_seen_so_far_threshold, <NUMBER OF KBs TO USE AS THE THRESHOLD>
+  ```
+
+  The result of this callback will be returned as the result of the callback where the message has been delivered
+  and `c:xrmq_basic_deliver/3` has been called.
+
+  The result of `c:xrmq_basic_deliver/3` is the one used as the argument to this callback and by default it is left
+  untouched.
+  """
+  @callback xrmq_on_hibernation_threshold_reached(tuple) :: tuple
+
+  @doc """
+  This overridable hook is called when a message is buffered while waiting for a connection to be (re-)established.
+
+  Message buffering (disabled by default) can be enabled by writing:
+
+  ```elixir
+  config :exrabbitmq, :message_buffering_enabled, true
+  ```
+
+  The arguments passed are the current count of the buffered messages so far as well as the message payload,
+  exchange, routing key and the options passed to the call to `xrmq_basic_publish/4`.
+  """
+  @callback xrmq_on_message_buffered(non_neg_integer, binary, binary, binary, keyword) :: term
+
+  @doc """
+  This overridable hook is called when a connection is (re-)established and there are buffered messages to send.
+
+  Message buffering (disabled by default) can be enabled by writing:
+
+  ```elixir
+  config :exrabbitmq, :message_buffering_enabled, true
+  ```
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_flush_buffered_messages([XRMQState.buffered_message()], term) :: term
+
+  # credo:disable-for-next-line
+  defmacro __using__(_) do
+    inner_ast = ExRabbitMQ.AST.Consumer.GenServer.ast()
+    common_ast = ExRabbitMQ.AST.Common.ast()
 
     # credo:disable-for-next-line
     quote location: :keep do
@@ -275,11 +334,26 @@ defmodule ExRabbitMQ.Consumer do
         case xrmq_connection_setup(connection_config) do
           :ok ->
             XRMQState.set_session_config(session_config)
-            xrmq_open_channel_setup_consume(start_consuming, state)
+
+            case xrmq_open_channel_setup_consume(start_consuming, state) do
+              {:ok, state} ->
+                state = xrmq_flush_buffered_messages(state)
+
+                {:ok, state}
+
+              error ->
+                error
+            end
 
           {:error, reason} ->
+            XRMQState.set_connection_status(:disconnected)
+
             {:error, reason, state}
         end
+      end
+
+      def xrmq_try_init(connection_config, session_config, start_consuming \\ true, state) do
+        xrmq_try_init_consumer({connection_config, session_config, start_consuming}, state)
       end
 
       def xrmq_open_channel_setup_consume(start_consuming \\ true, state)
@@ -360,12 +434,22 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
-      @deprecated "Use ExRabbitMQ.State.get_session_config/0 instead"
-      def xrmq_get_session_config do
-        XRMQState.get_session_config()
+      unquote(common_ast)
+
+      defp xrmq_try_init_consumer(
+             {connection_config_spec, session_config_spec, auto_consume} = opts,
+             state
+           ) do
+        connection_config_spec
+        |> xrmq_init(session_config_spec, auto_consume, state)
+        |> xrmq_try_init_inner(opts)
       end
 
-      unquote(common_ast)
+      defp xrmq_try_init_consumer({connection_config_spec, session_config_spec} = opts, state) do
+        connection_config_spec
+        |> xrmq_init(session_config_spec, true, state)
+        |> xrmq_try_init_inner(opts)
+      end
 
       defoverridable xrmq_basic_cancel: 2,
                      xrmq_basic_ack: 2,

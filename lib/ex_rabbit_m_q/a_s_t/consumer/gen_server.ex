@@ -11,28 +11,45 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
   """
   def ast do
     quote location: :keep do
+      alias ExRabbitMQ.Config.Environment, as: XRMQEnvironmentConfig
       alias ExRabbitMQ.State, as: XRMQState
 
+      @impl true
       def handle_info({:basic_deliver, payload, meta}, state) do
-        xrmq_basic_deliver(payload, meta, state)
+        if XRMQEnvironmentConfig.accounting_enabled() and is_binary(payload) do
+          payload |> byte_size() |> Kernel./(1_024) |> XRMQState.add_kb_of_messages_seen_so_far()
+        end
+
+        callback_result = xrmq_basic_deliver(payload, meta, state)
+
+        if XRMQEnvironmentConfig.accounting_enabled() and XRMQState.hibernate?(),
+          do: xrmq_on_hibernation_threshold_reached(callback_result),
+          else: callback_result
       end
 
+      @impl true
       def handle_info({:basic_cancel, cancellation_info}, state) do
         xrmq_basic_cancel(cancellation_info, state)
       end
 
+      @impl true
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
-        state =
-          state
-          |> xrmq_open_channel_setup_consume()
-          |> xrmq_extract_state()
+        case xrmq_open_channel_setup_consume(state) do
+          {:ok, state} ->
+            state = xrmq_on_connection_reopened(connection, state)
+            state = xrmq_flush_buffered_messages(state)
 
-        state = xrmq_on_connection_open(connection, state)
+            {:noreply, state}
 
-        {:noreply, state}
+          {:error, reason, state} ->
+            {:stop, reason, state}
+        end
       end
 
+      @impl true
       def handle_info({:xrmq_connection, {:closed, _}}, state) do
+        XRMQState.set_connection_status(:disconnected)
+
         state = xrmq_on_connection_closed(state)
 
         # WE WILL CONTINUE HANDLING THIS EVENT WHEN WE HANDLE THE CHANNEL DOWN EVENT
@@ -40,6 +57,7 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
         {:noreply, state}
       end
 
+      @impl true
       def handle_info({:DOWN, ref, :process, pid, reason}, state) do
         case XRMQState.get_channel_info() do
           {_, ^ref} ->
@@ -58,6 +76,12 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
             {:noreply, state}
         end
       end
+
+      @impl true
+      def handle_info({:xrmq_try_init, opts}, state), do: xrmq_try_init_consumer(opts, state)
+
+      @impl true
+      def handle_continue({:xrmq_try_init, opts}, state), do: xrmq_try_init_consumer(opts, state)
     end
   end
 end

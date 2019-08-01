@@ -1,15 +1,11 @@
 defmodule ExRabbitMQ.Impl.ConsumerGenServer do
   @moduledoc false
 
-  use ExRabbitMQ.Consumer, GenServer
+  use GenServer
+  use ExRabbitMQ.Consumer
 
-  def xrmq_basic_deliver(_payload, _metadata, state), do: {:noreply, state}
-end
-
-defmodule ExRabbitMQ.Impl.ConsumerGenStage do
-  @moduledoc false
-
-  use ExRabbitMQ.Consumer, GenStage
+  @impl true
+  def init(_), do: {:ok, nil}
 
   def xrmq_basic_deliver(_payload, _metadata, state), do: {:noreply, state}
 end
@@ -17,5 +13,9 @@ end
 defmodule ExRabbitMQ.Impl.ProducerGenServer do
   @moduledoc false
 
+  use GenServer
   use ExRabbitMQ.Producer
+
+  @impl true
+  def init(_), do: {:ok, nil}
 end

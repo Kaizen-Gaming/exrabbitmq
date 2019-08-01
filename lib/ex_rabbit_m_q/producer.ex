@@ -67,29 +67,56 @@ defmodule ExRabbitMQ.Producer do
   @callback xrmq_init(CommonAST.connection(), atom | SessionConfig.t(), term) ::
               CommonAST.result()
 
+  @doc """
+  This helper function tries to use `c:xrmq_init/3` to set up a connection to RabbitMQ.
+
+  In case that fails, it tries again after a configured interval.
+
+  The interval can be configured by writing:
+
+  ```elixir
+  config :exrabbitmq, :try_init_interval, <THE INTERVAL BETWEEN CONNECTION RETRIES IN MILLISECONDS>
+  ```
+
+  The simplest way to use this is to add the following as part of the `GenServer.init/1` callback result:
+
+  ```elixir
+  ExRabbitMQ.continue_tuple_try_init(connection_config)
+
+  # or
+
+  ExRabbitMQ.continue_tuple_try_init(connection_config, session_config, true)
+  ```
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_try_init(CommonAST.connection(), CommonAST.queue(), term) :: CommonAST.result()
+
+  @doc """
+  This overridable callback is called by `c:xrmq_try_init/4` just before a new connection attempt is made.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_on_try_init(term) :: term
+
+  @doc """
+  This overridable callback is called by `c:xrmq_try_init/4` when a new connection has been established.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_on_try_init_success(term) :: term
+
+  @doc """
+  This overridable callback is called by `c:xrmq_try_init/4` when a new connection could not be established.
+
+  The error the occurred as well as the wrapper process's state is passed in to allow the callback to mutate
+  it if overriden.
+  """
+  @callback xrmq_on_try_init_error(term, term) :: term
+
   @doc false
   @callback xrmq_session_setup(AMQP.Channel.t(), atom | SessionConfig.t(), term) ::
               Common.result()
-
-  @doc """
-  Returns a part of the `:exrabbitmq` configuration section, specified with the
-  `key` argument.
-
-  For the configuration format see the top section of `ExRabbitMQ.Producer`.
-
-  **Deprecated:** Use `ExRabbitMQ.Config.Connection.from_env/2` instead.
-  """
-  @callback xrmq_get_env_config(atom) :: keyword
-
-  @doc """
-  Returns the connection configuration as it was passed to `c:xrmq_init/2`.
-
-  This configuration is set in the wrapper process's dictionary.
-  For the configuration format see the top section of `ExRabbitMQ.Producer`.
-
-  **Deprecated:** Use `ExRabbitMQ.State.get_connection_config/0` instead.
-  """
-  @callback xrmq_get_connection_config :: term
 
   @doc """
   This hook is called when a connection has been established and a new channel has been opened.
@@ -125,7 +152,7 @@ defmodule ExRabbitMQ.Producer do
   It is passed the connection struct and the wrapper process's state is passed in to allow the callback
   to mutate it if overriden.
   """
-  @callback xrmq_on_connection_open(AMQP.Connection.t(), term) :: term
+  @callback xrmq_on_connection_reopened(AMQP.Connection.t(), term) :: term
 
   @doc """
   This overridable hook is  called when an already established connection is dropped.
@@ -134,9 +161,23 @@ defmodule ExRabbitMQ.Producer do
   """
   @callback xrmq_on_connection_closed(term) :: term
 
+  @doc """
+  This overridable hook is called when a connection is (re-)established and there are buffered messages to send.
+
+  Message buffering (disabled by default) can be enabled by writing:
+
+  ```elixir
+  # this is a compile time constant
+  config :exrabbitmq, :message_buffering_enabled, true
+  ```
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_flush_buffered_messages([term], term) :: term
+
   defmacro __using__(_) do
-    common_ast = ExRabbitMQ.AST.Common.ast()
     inner_ast = ExRabbitMQ.AST.Producer.GenServer.ast()
+    common_ast = ExRabbitMQ.AST.Common.ast()
 
     quote location: :keep do
       require Logger
@@ -153,11 +194,26 @@ defmodule ExRabbitMQ.Producer do
         case xrmq_connection_setup(connection_config) do
           :ok ->
             XRMQState.set_session_config(session_config)
-            xrmq_open_channel_setup(state)
+
+            case xrmq_open_channel_setup(state) do
+              {:ok, state} ->
+                state = xrmq_flush_buffered_messages(state)
+
+                {:ok, state}
+
+              error ->
+                error
+            end
 
           {:error, reason} ->
+            XRMQState.set_connection_status(:disconnected)
+
             {:error, reason, state}
         end
+      end
+
+      def xrmq_try_init(connection_config, session_config \\ nil, state) do
+        xrmq_try_init_producer({connection_config, session_config}, state)
       end
 
       def xrmq_open_channel_setup(state) do
@@ -180,6 +236,18 @@ defmodule ExRabbitMQ.Producer do
       end
 
       unquote(common_ast)
+
+      defp xrmq_try_init_producer({connection_config_spec, session_config_spec} = opts, state) do
+        connection_config_spec
+        |> xrmq_init(session_config_spec, state)
+        |> xrmq_try_init_inner(opts)
+      end
+
+      defp xrmq_try_init_producer(connection_config_spec, state) do
+        connection_config_spec
+        |> xrmq_init(nil, state)
+        |> xrmq_try_init_inner(connection_config_spec)
+      end
     end
   end
 end
