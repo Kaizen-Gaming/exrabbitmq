@@ -5,7 +5,10 @@
 
 import Config
 
-config :exrabbitmq, :connection,
+for connection <- [:test_different_connections, :test_max_channels] do
+  config :exrabbitmq, connection,
   username: "guest",
   password: "guest",
-  host: "localhost"
+  host: "localhost",
+  application_name: "exrabbitmq_tests"
+end

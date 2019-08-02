@@ -40,6 +40,7 @@ defmodule ExRabbitMQ.Connection.Pool.Supervisor do
   end
 
   def init(_args) do
+    ExRabbitMQ.NameGenerator.initialize()
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 

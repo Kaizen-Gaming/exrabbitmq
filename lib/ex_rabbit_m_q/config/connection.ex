@@ -32,6 +32,9 @@ defmodule ExRabbitMQ.Config.Connection do
 
     # the maximum channels per connection (optional, default: 65535)
     max_channels: 65535,
+
+    # application name will be visible in rabbitmq admin under each connection (human readable, non-unique value)
+    application_name: "my_app_name"
   ```
   """
   alias ExRabbitMQ.Config.Pool, as: PoolConfig
@@ -48,7 +51,8 @@ defmodule ExRabbitMQ.Config.Connection do
     :reconnect_after,
     :max_channels,
     :pool,
-    :cleanup_after
+    :cleanup_after,
+    :client_properties
   ]
 
   @type t :: %__MODULE__{
@@ -61,7 +65,8 @@ defmodule ExRabbitMQ.Config.Connection do
           reconnect_after: pos_integer,
           max_channels: pos_integer,
           pool: PoolConfig.t(),
-          cleanup_after: pos_integer
+          cleanup_after: pos_integer,
+          client_properties: list()
         }
 
   @spec get(atom, atom | t()) :: t()
@@ -97,6 +102,12 @@ defmodule ExRabbitMQ.Config.Connection do
   defp from_env(app, key) do
     config = Application.get_env(app, key, [])
 
+    client_props = if is_binary(config[:application_name]) do
+      [{"connection_name", :longstr, config[:application_name]}]
+    else
+      []
+    end
+
     %__MODULE__{
       username: config[:username],
       password: config[:password],
@@ -107,7 +118,8 @@ defmodule ExRabbitMQ.Config.Connection do
       reconnect_after: config[:reconnect_after],
       max_channels: config[:max_channels],
       pool: PoolConfig.get(config[:pool] || []),
-      cleanup_after: config[:cleanup_after]
+      cleanup_after: config[:cleanup_after],
+      client_properties: client_props
     }
   end
 
@@ -123,7 +135,8 @@ defmodule ExRabbitMQ.Config.Connection do
       reconnect_after: config.reconnect_after || 2_000,
       max_channels: config.max_channels || 65_535,
       pool: PoolConfig.get(config.pool || []),
-      cleanup_after: config.cleanup_after || 5_000
+      cleanup_after: config.cleanup_after || 5_000,
+      client_properties: config.client_properties || []
     }
   end
 

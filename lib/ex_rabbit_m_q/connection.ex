@@ -164,7 +164,8 @@ defmodule ExRabbitMQ.Connection do
       host: config.host,
       port: config.port,
       virtual_host: config.vhost,
-      heartbeat: config.heartbeat
+      heartbeat: config.heartbeat,
+      client_properties: config.client_properties
     ]
 
     case AMQP.Connection.open(opts) do
