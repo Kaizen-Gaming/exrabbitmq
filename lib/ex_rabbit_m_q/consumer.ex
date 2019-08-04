@@ -323,7 +323,7 @@ defmodule ExRabbitMQ.Consumer do
       alias ExRabbitMQ.Constants, as: XRMQConstants
       alias ExRabbitMQ.State, as: XRMQState
 
-      require Logger
+      require ExRabbitMQ.Logger, as: Logger
 
       unquote(inner_ast)
 

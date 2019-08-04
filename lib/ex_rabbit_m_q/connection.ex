@@ -19,7 +19,7 @@ defmodule ExRabbitMQ.Connection do
   alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
   alias ExRabbitMQ.Connection.PubSub
 
-  require Logger
+  require ExRabbitMQ.Logger, as: Logger
 
   defstruct [
     :connection,

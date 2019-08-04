@@ -39,7 +39,7 @@ defmodule ExRabbitMQ.Config.Connection do
   """
   alias ExRabbitMQ.Config.Pool, as: PoolConfig
 
-  require Logger
+  require ExRabbitMQ.Logger, as: Logger
 
   defstruct [
     :username,
