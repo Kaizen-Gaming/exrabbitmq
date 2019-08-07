@@ -89,14 +89,6 @@ defmodule TestProducer do
   # optional override for when a failed connection is re-established
   def xrmq_on_connection_reopened(%AMQP.Connection{}, state), do: state
 
-  # optional override for when accounting has been activated:
-  # `config :exrabbitmq, :accounting_enabled, true`
-  # and the configured theshold:
-  # `config :exrabbitmq, :kb_of_messages_seen_so_far_threshold, <NUMBER OF KBs TO USE AS THE THRESHOLD>`
-  # has been reached
-  # (ie, the configured amount of message KBs has been seen by the process)
-  def xrmq_on_hibernation_threshold_reached(callback_result), do: callback_result
-
   # optional override for when a published message has been buffered after the underlying connection has failed
   # to enable message buffering: `config :exrabbitmq, :message_buffering_enabled, true`
   def xrmq_on_message_buffered(
