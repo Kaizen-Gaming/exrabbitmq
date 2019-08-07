@@ -131,16 +131,50 @@ defmodule ExRabbitMQ.Consumer do
   This overridable callback is called by `c:xrmq_try_init/4` when a new connection has been established.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+
+  The return value of this callback tells the caller how to continue.
+
+  If `{:cont, state}` is returned, the coller will continue with `{:noreply, state}`.
+
+  If `{:halt, reason, state}` is returned, the caller will continue with `{:stop, reason, state}`.
+
+  By default, the return value of this callback is `{:cont, state}`.
   """
-  @callback xrmq_on_try_init_success(term) :: term
+  @callback xrmq_on_try_init_success(term) :: {:cont, term} | {:halt, term, term}
 
   @doc """
-  This overridable callback is called by `c:xrmq_try_init/4` when a new connection could not be established.
+  This overridable callback is called by `c:xrmq_try_init/4` when a new connection could not be established
+  but a new attempt can be made (ie, waiting for a connection to become available).
 
   The error the occurred as well as the wrapper process's state is passed in to allow the callback to mutate
   it if overriden.
+
+  The return value of this callback tells the caller how to continue.
+
+  If `{:cont, state}` is returned, the coller will continue with `{:noreply, state}`.
+
+  If `{:halt, reason, state}` is returned, the caller will continue with `{:stop, reason, state}`.
+
+  By default, the return value of this callback is `{:cont, state}`.
   """
-  @callback xrmq_on_try_init_error(term, term) :: term
+  @callback xrmq_on_try_init_error_retry(term, term) :: {:cont, term} | {:halt, term, term}
+
+  @doc """
+  This overridable callback is called by `c:xrmq_try_init/4` when a new connection could not be established
+  and the error is not normally recoverable (ie, an error not related to a connection being currently unavailable).
+
+  The error that occurred as well as the wrapper process's state is passed in to allow the callback to mutate
+  it if overriden.
+
+  The return value of this callback tells the caller how to continue.
+
+  If `{:cont, state}` is returned, the coller will continue with `{:noreply, state}`.
+
+  If `{:halt, reason, state}` is returned, the caller will continue with `{:stop, reason, state}`.
+
+  By default, the return value of this callback is `{:halt, reason, state}`.
+  """
+  @callback xrmq_on_try_init_error(term, term) :: {:cont, term} | {:halt, term, term}
 
   @doc false
   @callback xrmq_open_channel_setup_consume(term, boolean) :: {:ok, term} | {:error, term, term}

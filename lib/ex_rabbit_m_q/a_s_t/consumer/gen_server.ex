@@ -17,7 +17,12 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
       @impl true
       def handle_info({:basic_deliver, payload, meta}, state) do
         if XRMQEnvironmentConfig.accounting_enabled() and is_binary(payload) do
-          payload |> byte_size() |> Kernel./(1_024) |> XRMQState.add_kb_of_messages_seen_so_far()
+          payload
+          |> byte_size()
+          |> Kernel./(1_024)
+          |> Float.round()
+          |> trunc()
+          |> XRMQState.add_kb_of_messages_seen_so_far()
         end
 
         callback_result = xrmq_basic_deliver(payload, meta, state)

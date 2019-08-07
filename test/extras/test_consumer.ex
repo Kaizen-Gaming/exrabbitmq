@@ -47,19 +47,15 @@ defmodule TestConsumer do
 
     send(tester_pid, {:consumer_state, state})
 
-    state
+    {:cont, state}
+  end
+
+  def xrmq_on_try_init_error_retry(reason, state) do
+    xrmq_on_try_init_error_common(reason, state)
   end
 
   def xrmq_on_try_init_error(reason, state) do
-    %{tester_pid: tester_pid} = state
-
-    message = {:error, reason}
-
-    send(tester_pid, message)
-
-    send(tester_pid, {:consumer_state, state})
-
-    state
+    xrmq_on_try_init_error_common(reason, state)
   end
 
   # required override
@@ -108,4 +104,16 @@ defmodule TestConsumer do
   # optional override for when the buffered messages can be flushed after a new connection has been established
   # to enable message buffering: `config :exrabbitmq, :message_buffering_enabled, true`
   def xrmq_flush_buffered_messages(_buffered_messages_count, _buffered_messages, state), do: state
+
+  defp xrmq_on_try_init_error_common(reason, state) do
+    %{tester_pid: tester_pid} = state
+
+    message = {:error, reason}
+
+    send(tester_pid, message)
+
+    send(tester_pid, {:consumer_state, state})
+
+    {:cont, state}
+  end
 end

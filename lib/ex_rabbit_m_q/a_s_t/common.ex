@@ -32,9 +32,11 @@ defmodule ExRabbitMQ.AST.Common do
 
       def xrmq_on_try_init(state), do: state
 
-      def xrmq_on_try_init_success(state), do: state
+      def xrmq_on_try_init_success(state), do: {:cont, state}
 
-      def xrmq_on_try_init_error(_reason, state), do: state
+      def xrmq_on_try_init_error_retry(_reason, state), do: {:cont, state}
+
+      def xrmq_on_try_init_error(reason, state), do: {:halt, reason, state}
 
       def xrmq_channel_setup(_channel, state) do
         {:ok, state}
@@ -117,26 +119,32 @@ defmodule ExRabbitMQ.AST.Common do
 
         case xrmq_init_result do
           {:ok, state} ->
-            state = xrmq_on_try_init_success(state)
-
-            {:noreply, state}
+            case xrmq_on_try_init_success(state) do
+              {:cont, state} -> {:noreply, state}
+              {:halt, reason, state} -> {:stop, reason, state}
+            end
 
           {:error, reason, state}
           when reason in [:nil_connection_pid, :no_available_connection] ->
-            state = xrmq_on_try_init_error(reason, state)
+            case xrmq_on_try_init_error_retry(reason, state) do
+              {:cont, state} ->
+                Process.send_after(
+                  self(),
+                  {:xrmq_try_init, opts},
+                  XRMQEnvironmentConfig.try_init_interval()
+                )
 
-            Process.send_after(
-              self(),
-              {:xrmq_try_init, opts},
-              XRMQEnvironmentConfig.try_init_interval()
-            )
+                {:noreply, state}
 
-            {:noreply, state}
+              {:halt, reason, state} ->
+                {:stop, reason, state}
+            end
 
           {:error, reason, state} ->
-            state = xrmq_on_try_init_error(reason, state)
-
-            {:stop, reason, state}
+            case xrmq_on_try_init_error(reason, state) do
+              {:cont, state} -> {:noreply, state}
+              {:halt, reason, state} -> {:stop, reason, state}
+            end
         end
       end
 
@@ -261,7 +269,12 @@ defmodule ExRabbitMQ.AST.Common do
 
       defp xrmq_basic_publish(:connected, payload, exchange, routing_key, opts) do
         if XRMQEnvironmentConfig.accounting_enabled() do
-          payload |> byte_size() |> Kernel./(1_024) |> XRMQState.add_kb_of_messages_seen_so_far()
+          payload
+          |> byte_size()
+          |> Kernel./(1_024)
+          |> Float.round()
+          |> trunc()
+          |> XRMQState.add_kb_of_messages_seen_so_far()
         end
 
         result =
@@ -306,6 +319,7 @@ defmodule ExRabbitMQ.AST.Common do
 
       defoverridable xrmq_on_try_init: 1,
                      xrmq_on_try_init_success: 1,
+                     xrmq_on_try_init_error_retry: 2,
                      xrmq_on_try_init_error: 2,
                      xrmq_session_setup: 3,
                      xrmq_channel_setup: 2,
