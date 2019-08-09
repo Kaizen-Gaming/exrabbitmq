@@ -13,6 +13,13 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
       alias ExRabbitMQ.State, as: XRMQState
 
       @impl true
+      def handle_info({:xrmq_connection, {:new, connection}}, state) do
+        state = xrmq_on_connection_opened(connection, state)
+
+        {:noreply, state}
+      end
+
+      @impl true
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         case xrmq_open_channel_setup(state) do
           {:ok, state} ->

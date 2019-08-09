@@ -38,6 +38,13 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
       end
 
       @impl true
+      def handle_info({:xrmq_connection, {:new, connection}}, state) do
+        state = xrmq_on_connection_opened(connection, state)
+
+        {:noreply, state}
+      end
+
+      @impl true
       def handle_info({:xrmq_connection, {:open, connection}}, state) do
         case xrmq_open_channel_setup_consume(state) do
           {:ok, state} ->
@@ -47,7 +54,10 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
             {:noreply, state}
 
           {:error, reason, state} ->
-            {:stop, reason, state}
+            case xrmq_on_connection_reopened_consume_failed(reason, state) do
+              {:cont, state} -> {:noreply, state}
+              {:halt, reason, state} -> {:stop, reason, state}
+            end
         end
       end
 
@@ -68,12 +78,18 @@ defmodule ExRabbitMQ.AST.Consumer.GenServer do
           {_, ^ref} ->
             XRMQState.set_channel_info(nil, nil)
 
-            new_state =
-              state
-              |> xrmq_open_channel_setup_consume()
-              |> xrmq_extract_state()
+            case xrmq_open_channel_setup_consume(state) do
+              {:ok, state} ->
+                state = xrmq_flush_buffered_messages(state)
 
-            {:noreply, new_state}
+                {:noreply, state}
+
+              {:error, reason, state} ->
+                case xrmq_on_channel_reopened_consume_failed(reason, state) do
+                  {:cont, state} -> {:noreply, state}
+                  {:halt, reason, state} -> {:stop, reason, state}
+                end
+            end
 
           _ ->
             send(self(), {{:DOWN, ref, :process, pid, reason}})

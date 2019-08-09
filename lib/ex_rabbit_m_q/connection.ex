@@ -26,6 +26,7 @@ defmodule ExRabbitMQ.Connection do
     :connection_pid,
     :ets_consumers,
     config: %ConnectionConfig{},
+    new?: true,
     stale?: false
   ]
 
@@ -156,7 +157,7 @@ defmodule ExRabbitMQ.Connection do
   def handle_info(:connect, state) do
     XRMQLogger.debug("Connecting to RabbitMQ")
 
-    %{config: config, ets_consumers: ets_consumers} = state
+    %{config: config, ets_consumers: ets_consumers, new?: new?} = state
 
     opts = [
       username: config.username,
@@ -173,8 +174,11 @@ defmodule ExRabbitMQ.Connection do
         XRMQLogger.debug("Connected to RabbitMQ")
 
         Process.link(connection_pid)
-        PubSub.publish(ets_consumers, {:xrmq_connection, {:open, connection}})
-        new_state = %{state | connection: connection, connection_pid: connection_pid}
+
+        connection_status = if new?, do: :new, else: :open
+        PubSub.publish(ets_consumers, {:xrmq_connection, {connection_status, connection}})
+
+        new_state = %{state | connection: connection, connection_pid: connection_pid, new?: false}
 
         {:noreply, new_state}
 

@@ -95,11 +95,11 @@ defmodule ExRabbitMQ.AST.Common do
         end)
       end
 
+      def xrmq_on_connection_opened(%AMQP.Connection{} = _connection, state), do: state
+
       def xrmq_on_connection_closed(state), do: state
 
       def xrmq_on_connection_reopened(%AMQP.Connection{} = _connection, state), do: state
-
-      def xrmq_on_hibernation_threshold_reached(callback_result), do: callback_result
 
       def xrmq_flush_buffered_messages(_buffered_messages_count, _buffered_messages, state) do
         state
@@ -289,6 +289,12 @@ defmodule ExRabbitMQ.AST.Common do
         hibernate? = XRMQEnvironmentConfig.accounting_enabled() and XRMQState.hibernate?()
 
         {result, hibernate?}
+      catch
+        :exit, reason ->
+          case reason do
+            {:error, _} = error -> {error, false}
+            error -> {{:error, error}, false}
+          end
       end
 
       defp xrmq_basic_publish(:disconnected, payload, exchange, routing_key, opts) do
@@ -325,9 +331,9 @@ defmodule ExRabbitMQ.AST.Common do
                      xrmq_channel_setup: 2,
                      xrmq_channel_open: 2,
                      xrmq_channel_close: 1,
+                     xrmq_on_connection_opened: 2,
                      xrmq_on_connection_closed: 1,
                      xrmq_on_connection_reopened: 2,
-                     xrmq_on_hibernation_threshold_reached: 1,
                      xrmq_on_message_buffered: 5,
                      xrmq_flush_buffered_messages: 3
     end

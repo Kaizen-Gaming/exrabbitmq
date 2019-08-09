@@ -233,7 +233,7 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_basic_deliver(term, term, term) :: callback_result
 
   @doc """
-  This overridable hook is  called as a response to a `:basic_cancel` message.
+  This overridable hook is called as a response to a `:basic_cancel` message.
 
   It is passed the `cancellation_info` of the request and by default it logs an error and
   returns `{:stop, :basic_cancel, state}`.
@@ -280,7 +280,15 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_extract_state({:ok, term} | {:error, term, term}) :: term
 
   @doc """
-  This overridable hook is  called when an already established connection has just been re-established.
+  This overridable hook is called when a new connection is established.
+
+  It is passed the connection struct and the wrapper process's state is passed in to allow the callback
+  to mutate it if overriden.
+  """
+  @callback xrmq_on_connection_opened(AMQP.Connection.t(), term) :: term
+
+  @doc """
+  This overridable hook is called when an already established connection has just been re-established.
 
   It is passed the connection struct and the wrapper process's state is passed in to allow the callback
   to mutate it if overriden.
@@ -288,7 +296,61 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_on_connection_reopened(AMQP.Connection.t(), term) :: term
 
   @doc """
-  This overridable hook is  called when an already established connection is dropped.
+  This overridable hook is called when a new connection is established but consuming from the configured queue has
+  failed.
+
+  The error that occurred as well as the wrapper process's state is passed in to allow the callback to mutate
+  it if overriden.
+
+  The return value of this callback tells the caller how to continue.
+
+  If `{:cont, state}` is returned, the coller will continue with `{:noreply, state}`.
+
+  If `{:halt, reason, state}` is returned, the caller will continue with `{:stop, reason, state}`.
+
+  By default, the return value of this callback is `{:halt, reason, state}`.
+  """
+  @callback xrmq_on_connection_opened_consume_failed(term, term) ::
+              {:cont, term} | {:halt, term, term}
+
+  @doc """
+  This overridable hook is called when an already established connection has just been re-established but consuming
+  from the configured queue has failed.
+
+  The error that occurred as well as the wrapper process's state is passed in to allow the callback to mutate
+  it if overriden.
+
+  The return value of this callback tells the caller how to continue.
+
+  If `{:cont, state}` is returned, the coller will continue with `{:noreply, state}`.
+
+  If `{:halt, reason, state}` is returned, the caller will continue with `{:stop, reason, state}`.
+
+  By default, the return value of this callback is `{:halt, reason, state}`.
+  """
+  @callback xrmq_on_connection_reopened_consume_failed(term, term) ::
+              {:cont, term} | {:halt, term, term}
+
+  @doc """
+  This overridable hook is called when a channel that had died has just been reopened but consuming from the configured
+  queue has failed.
+
+  The error that occurred as well as the wrapper process's state is passed in to allow the callback to mutate
+  it if overriden.
+
+  The return value of this callback tells the caller how to continue.
+
+  If `{:cont, state}` is returned, the coller will continue with `{:noreply, state}`.
+
+  If `{:halt, reason, state}` is returned, the caller will continue with `{:stop, reason, state}`.
+
+  By default, the return value of this callback is `{:halt, reason, state}`.
+  """
+  @callback xrmq_on_channel_reopened_consume_failed(term, term) ::
+              {:cont, term} | {:halt, term, term}
+
+  @doc """
+  This overridable hook is called when an already established connection is dropped.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
   """
@@ -377,8 +439,11 @@ defmodule ExRabbitMQ.Consumer do
 
                 {:ok, state}
 
-              error ->
-                error
+              {:error, reason, state} ->
+                case xrmq_on_connection_opened_consume_failed(reason, state) do
+                  {:cont, state} -> {:ok, state}
+                  {:halt, reason, state} -> {:error, reason, state}
+                end
             end
 
           {:error, reason} ->
@@ -424,6 +489,12 @@ defmodule ExRabbitMQ.Consumer do
           {:ok, _} -> {:ok, state}
           {:error, reason} -> {:error, reason, state}
         end
+      catch
+        :exit, reason ->
+          case reason do
+            {:error, reason} -> {:error, reason, state}
+            error -> {:error, error, state}
+          end
       end
 
       defp xrmq_qos_setup(_channel, [], state), do: {:ok, state}
@@ -432,6 +503,12 @@ defmodule ExRabbitMQ.Consumer do
         with :ok <- AMQP.Basic.qos(channel, opts) do
           {:ok, state}
         end
+      catch
+        :exit, reason ->
+          case reason do
+            {:error, reason} -> {:error, reason, state}
+            error -> {:error, error, state}
+          end
       end
 
       def xrmq_basic_ack(delivery_tag, state) do
@@ -447,7 +524,10 @@ defmodule ExRabbitMQ.Consumer do
               end
             catch
               :exit, reason ->
-                {:error, reason, state}
+                case reason do
+                  {:error, reason} -> {:error, reason, state}
+                  error -> {:error, error, state}
+                end
             end
         end
       end
@@ -465,10 +545,21 @@ defmodule ExRabbitMQ.Consumer do
               end
             catch
               :exit, reason ->
-                {:error, reason, state}
+                case reason do
+                  {:error, reason} -> {:error, reason, state}
+                  error -> {:error, error, state}
+                end
             end
         end
       end
+
+      def xrmq_on_hibernation_threshold_reached(callback_result), do: callback_result
+
+      def xrmq_on_connection_opened_consume_failed(reason, state), do: {:halt, reason, state}
+
+      def xrmq_on_connection_reopened_consume_failed(reason, state), do: {:halt, reason, state}
+
+      def xrmq_on_channel_reopened_consume_failed(_reason, state), do: {:cont, state}
 
       unquote(common_ast)
 
@@ -490,7 +581,11 @@ defmodule ExRabbitMQ.Consumer do
       defoverridable xrmq_basic_cancel: 2,
                      xrmq_basic_ack: 2,
                      xrmq_basic_reject: 2,
-                     xrmq_basic_reject: 3
+                     xrmq_basic_reject: 3,
+                     xrmq_on_hibernation_threshold_reached: 1,
+                     xrmq_on_connection_opened_consume_failed: 2,
+                     xrmq_on_connection_reopened_consume_failed: 2,
+                     xrmq_on_channel_reopened_consume_failed: 2
     end
   end
 end

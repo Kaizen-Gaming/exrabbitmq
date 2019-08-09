@@ -181,6 +181,14 @@ defmodule ExRabbitMQ.Producer do
   @callback xrmq_extract_state({:ok, term} | {:error, term, term}) :: state :: term
 
   @doc """
+  This overridable hook is  called when a new connection is established.
+
+  It is passed the connection struct and the wrapper process's state is passed in to allow the callback
+  to mutate it if overriden.
+  """
+  @callback xrmq_on_connection_opened(AMQP.Connection.t(), term) :: term
+
+  @doc """
   This overridable hook is  called when an already established connection has just been re-established.
 
   It is passed the connection struct and the wrapper process's state is passed in to allow the callback
