@@ -85,7 +85,7 @@ defmodule ExRabbitMQ.Producer do
 
   # or
 
-  ExRabbitMQ.continue_tuple_try_init(connection_config, session_config, true)
+  ExRabbitMQ.continue_tuple_try_init(connection_config, session_config)
   ```
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
