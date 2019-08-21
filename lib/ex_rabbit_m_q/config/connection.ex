@@ -39,7 +39,7 @@ defmodule ExRabbitMQ.Config.Connection do
   """
   alias ExRabbitMQ.Config.Pool, as: PoolConfig
 
-  require ExRabbitMQ.Logger, as: Logger
+  require ExRabbitMQ.Logger, as: XRMQLogger
 
   defstruct [
     :username,
@@ -143,7 +143,7 @@ defmodule ExRabbitMQ.Config.Connection do
     if max_channels >= 1 and max_channels <= 65_535 do
       config
     else
-      Logger.warn("The maximum number of connections per channel is out of range 1 to 65535.")
+      XRMQLogger.warn("The maximum number of connections per channel is out of range 1 to 65535.")
 
       %__MODULE__{config | max_channels: 65_535}
     end

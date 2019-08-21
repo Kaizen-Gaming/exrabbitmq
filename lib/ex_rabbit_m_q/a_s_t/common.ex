@@ -47,7 +47,7 @@ defmodule ExRabbitMQ.AST.Common do
       end
 
       def xrmq_basic_cancel(cancellation_info, state) do
-        Logger.error("received basic_cancel message", cancellation_info: cancellation_info)
+        XRMQLogger.error("received basic_cancel message", cancellation_info: cancellation_info)
 
         {:stop, :basic_cancel, state}
       end
@@ -174,14 +174,14 @@ defmodule ExRabbitMQ.AST.Common do
                 channel_monitor = Process.monitor(pid)
                 XRMQState.set_channel_info(channel, channel_monitor)
 
-                Logger.debug("opened a new channel")
+                XRMQLogger.debug("opened a new channel")
 
                 with {:ok, state} <- xrmq_channel_setup(channel, state) do
                   xrmq_channel_open(channel, state)
                 end
 
               error ->
-                Logger.error("could not open a new channel: #{inspect(error)}")
+                XRMQLogger.error("could not open a new channel: #{inspect(error)}")
                 XRMQState.set_channel_info(nil, nil)
                 Process.exit(self(), {:xrmq_channel_open_error, error})
 

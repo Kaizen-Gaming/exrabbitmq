@@ -19,7 +19,7 @@ defmodule ExRabbitMQ.Connection do
   alias ExRabbitMQ.Connection.Pool.Supervisor, as: PoolSupervisor
   alias ExRabbitMQ.Connection.PubSub
 
-  require ExRabbitMQ.Logger, as: Logger
+  require ExRabbitMQ.Logger, as: XRMQLogger
 
   defstruct [
     :connection,
@@ -154,7 +154,7 @@ defmodule ExRabbitMQ.Connection do
 
   @impl true
   def handle_info(:connect, state) do
-    Logger.debug("Connecting to RabbitMQ")
+    XRMQLogger.debug("Connecting to RabbitMQ")
 
     %{config: config, ets_consumers: ets_consumers} = state
 
@@ -170,7 +170,7 @@ defmodule ExRabbitMQ.Connection do
 
     case AMQP.Connection.open(opts) do
       {:ok, %AMQP.Connection{pid: connection_pid} = connection} ->
-        Logger.debug("Connected to RabbitMQ")
+        XRMQLogger.debug("Connected to RabbitMQ")
 
         Process.link(connection_pid)
         PubSub.publish(ets_consumers, {:xrmq_connection, {:open, connection}})
@@ -179,7 +179,7 @@ defmodule ExRabbitMQ.Connection do
         {:noreply, new_state}
 
       {:error, reason} ->
-        Logger.error("Failed to connect to RabbitMQ: #{inspect(reason)}")
+        XRMQLogger.error("Failed to connect to RabbitMQ: #{inspect(reason)}")
 
         Process.send_after(self(), :connect, config.reconnect_after)
         new_state = %{state | connection: nil, connection_pid: nil}
@@ -191,7 +191,7 @@ defmodule ExRabbitMQ.Connection do
   @impl true
   def handle_info({:EXIT, pid, _reason}, %{connection_pid: connection_pid} = state)
       when pid === connection_pid do
-    Logger.error("Disconnected from RabbitMQ")
+    XRMQLogger.error("Disconnected from RabbitMQ")
 
     %{config: config, ets_consumers: ets_consumers} = state
 

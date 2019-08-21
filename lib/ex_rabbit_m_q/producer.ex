@@ -214,7 +214,7 @@ defmodule ExRabbitMQ.Producer do
     common_ast = ExRabbitMQ.AST.Common.ast()
 
     quote location: :keep do
-      require ExRabbitMQ.Logger, as: Logger
+      require ExRabbitMQ.Logger, as: XRMQLogger
 
       alias ExRabbitMQ.Config.Connection, as: XRMQConnectionConfig
       alias ExRabbitMQ.Config.Session, as: XRMQSessionConfig
