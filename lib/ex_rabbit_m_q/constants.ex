@@ -40,26 +40,33 @@ defmodule ExRabbitMQ.Constants do
   @doc """
   The key in the process dictionary holding the current connection status.
   """
-  @spec connection_status_key :: :xrmq_connection_status_key
-  def connection_status_key, do: :xrmq_connection_status_key
+  @spec connection_status_key :: :xrmq_connection_status
+  def connection_status_key, do: :xrmq_connection_status
+
+  @doc """
+  The key in the process dictionary holding a boolean value that indicates whether or not a consumer should
+  automatically start consuming on connection.
+  """
+  @spec auto_consume_on_connection_key :: :xrmq_auto_consume_on_connection
+  def auto_consume_on_connection_key, do: :xrmq_auto_consume_on_connection
 
   @doc """
   The key in the process dictionary holding the buffered messages of a producer.
   """
-  @spec buffered_messages_key :: :xrmq_buffered_messages_key
-  def buffered_messages_key, do: :xrmq_buffered_messages_key
+  @spec buffered_messages_key :: :xrmq_buffered_messages
+  def buffered_messages_key, do: :xrmq_buffered_messages
 
   @doc """
   The key in the process dictionary holding the buffered messages count of a producer.
   """
-  @spec buffered_messages_count_key :: :xrmq_buffered_messages_count_key
-  def buffered_messages_count_key, do: :xrmq_buffered_messages_count_key
+  @spec buffered_messages_count_key :: :xrmq_buffered_messages_count
+  def buffered_messages_count_key, do: :xrmq_buffered_messages_count
 
   @doc """
   The key in the process dictionary holding the bytes of the messages seen so far, in KBs.
   """
-  @spec kb_of_messages_seen_so_far_key :: :xrmq_kb_of_messages_seen_so_far_key
-  def kb_of_messages_seen_so_far_key, do: :xrmq_kb_of_messages_seen_so_far_key
+  @spec kb_of_messages_seen_so_far_key :: :xrmq_kb_of_messages_seen_so_far
+  def kb_of_messages_seen_so_far_key, do: :xrmq_kb_of_messages_seen_so_far
 
   @doc """
   The error returned when an attempt to use a closed channel is made.

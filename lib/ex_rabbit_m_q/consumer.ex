@@ -177,7 +177,7 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_on_try_init_error(term, term) :: {:cont, term} | {:halt, term, term}
 
   @doc false
-  @callback xrmq_open_channel_setup_consume(term, boolean) :: {:ok, term} | {:error, term, term}
+  @callback xrmq_open_channel_setup_consume(term) :: {:ok, term} | {:error, term, term}
 
   @doc false
   @callback xrmq_session_setup(AMQP.Channel.t(), atom | SessionConfig.t(), term) ::
@@ -365,11 +365,13 @@ defmodule ExRabbitMQ.Consumer do
         connection_config = XRMQConnectionConfig.get(connection_config)
         session_config = XRMQSessionConfig.get(session_config)
 
+        XRMQState.set_auto_consume_on_connection(start_consuming)
+
         case xrmq_connection_setup(connection_config) do
           :ok ->
             XRMQState.set_session_config(session_config)
 
-            case xrmq_open_channel_setup_consume(start_consuming, state) do
+            case xrmq_open_channel_setup_consume(state) do
               {:ok, state} ->
                 state = xrmq_flush_buffered_messages(state)
 
@@ -390,9 +392,7 @@ defmodule ExRabbitMQ.Consumer do
         xrmq_try_init_consumer({connection_config, session_config, start_consuming}, state)
       end
 
-      def xrmq_open_channel_setup_consume(start_consuming \\ true, state)
-
-      def xrmq_open_channel_setup_consume(start_consuming, state) do
+      def xrmq_open_channel_setup_consume(state) do
         with {:ok, state} <- xrmq_open_channel(state),
              {channel, _} <- XRMQState.get_channel_info(),
              session_config <- XRMQState.get_session_config(),
@@ -400,7 +400,7 @@ defmodule ExRabbitMQ.Consumer do
              # get the session_config again because it may have changed (eg, by using an anonymous queue)
              session_config <- XRMQState.get_session_config(),
              {:ok, state} <- xrmq_qos_setup(channel, session_config.qos_opts, state) do
-          if start_consuming,
+          if XRMQState.get_auto_consume_on_connection(),
             do: xrmq_consume(channel, session_config.queue, session_config.consume_opts, state),
             else: {:ok, state}
         else
@@ -418,6 +418,8 @@ defmodule ExRabbitMQ.Consumer do
       end
 
       def xrmq_consume(channel, queue, consume_opts, state) do
+        XRMQState.set_auto_consume_on_connection(true)
+
         case AMQP.Basic.consume(channel, queue, nil, consume_opts) do
           {:ok, _} -> {:ok, state}
           {:error, reason} -> {:error, reason, state}

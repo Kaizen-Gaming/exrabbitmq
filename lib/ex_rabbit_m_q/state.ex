@@ -112,6 +112,23 @@ defmodule ExRabbitMQ.State do
   end
 
   @doc """
+  Get whether or not a consumer should automatically start consuming on connection from the process dictionary.
+  """
+  @spec get_auto_consume_on_connection :: boolean
+  def get_auto_consume_on_connection do
+    Process.get(Constants.auto_consume_on_connection_key(), true)
+  end
+
+  @doc """
+  Set whether or not a consumer should automatically start consuming on connection in the process dictionary.
+  """
+  @spec set_auto_consume_on_connection(boolean) :: boolean
+  def set_auto_consume_on_connection(auto_consume_on_connection)
+      when is_boolean(auto_consume_on_connection) do
+    Process.put(Constants.auto_consume_on_connection_key(), auto_consume_on_connection)
+  end
+
+  @doc """
   Get and clear the buffered messages of a producer from the process dictionary.
 
   The messages of a producer start being buffered when the connection to RabbitMQ is lost.
