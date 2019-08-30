@@ -53,27 +53,39 @@ defmodule ExRabbitMQ.Config.Utils do
   @doc """
   A convenience function to produce a valid `:continue` tuple, for calling `xrmq_try_init/4` with the proper arguments.
 
+  If a continuation tuple is provided then it will be chained.
+
   This version applies only to consumers.
   """
-  @spec continue_tuple_try_init(connection_config, session_config, boolean) ::
-          {:continue, {:xrmq_try_init, {connection_config, session_config, boolean}}}
+  @spec continue_tuple_try_init(connection_config, session_config, boolean, continuation) ::
+          {:continue,
+           {:xrmq_try_init, {connection_config, session_config, boolean}, continuation}}
         when connection_config: atom | ConnectionConfig.t(),
-             session_config: atom | SessionConfig.t()
-  def continue_tuple_try_init(connection_config, session_config, auto_consume) do
-    {:continue, {:xrmq_try_init, {connection_config, session_config, auto_consume}}}
+             session_config: atom | SessionConfig.t(),
+             continuation: {:continue, term} | nil
+  def continue_tuple_try_init(
+        connection_config,
+        session_config,
+        auto_consume,
+        continuation
+      ) do
+    {:continue, {:xrmq_try_init, {connection_config, session_config, auto_consume}, continuation}}
   end
 
   @doc """
   A convenience function to produce a valid `:continue` tuple, for calling `xrmq_try_init/3` with the proper arguments.
 
+  If a continuation tuple is provided then it will be chained.
+
   This version applies only to producers.
   """
-  @spec continue_tuple_try_init(connection_config, session_config) ::
-          {:continue, {:xrmq_try_init, {connection_config, session_config}}}
+  @spec continue_tuple_try_init(connection_config, session_config, continuation) ::
+          {:continue, {:xrmq_try_init, {connection_config, session_config}, continuation}}
         when connection_config: atom | ConnectionConfig.t(),
-             session_config: atom | SessionConfig.t() | nil
-  def continue_tuple_try_init(connection_config, session_config \\ nil) do
-    {:continue, {:xrmq_try_init, {connection_config, session_config}}}
+             session_config: atom | SessionConfig.t() | nil,
+             continuation: {:continue, term} | nil
+  def continue_tuple_try_init(connection_config, session_config, continuation) do
+    {:continue, {:xrmq_try_init, {connection_config, session_config}, continuation}}
   end
 
   # helpers

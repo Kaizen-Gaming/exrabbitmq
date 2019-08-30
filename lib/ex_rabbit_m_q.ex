@@ -69,9 +69,14 @@ defmodule ExRabbitMQ do
 
   # continue_tuple_try_init
 
-  defdelegate continue_tuple_try_init(connection_config, session_config, auto_consume),
-    to: XRMQConfigUtils
+  defdelegate continue_tuple_try_init(
+                connection_config,
+                session_config,
+                auto_consume,
+                continuation
+              ),
+              to: XRMQConfigUtils
 
-  defdelegate continue_tuple_try_init(connection_config, session_config \\ nil),
+  defdelegate continue_tuple_try_init(connection_config, session_config, continuation),
     to: XRMQConfigUtils
 end

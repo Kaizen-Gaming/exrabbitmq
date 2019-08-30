@@ -19,7 +19,7 @@ defmodule TestProducer do
   def init(state) do
     %{connection_config: connection_config} = state
 
-    {:ok, state, ExRabbitMQ.continue_tuple_try_init(connection_config)}
+    {:ok, state, ExRabbitMQ.continue_tuple_try_init(connection_config, nil, nil)}
   end
 
   def handle_call(:stop, _from, state) do
@@ -30,7 +30,8 @@ defmodule TestProducer do
     %{tester_pid: tester_pid, session_config: session_config} = state
 
     queue =
-      Application.get_env(:exrabbitmq, session_config)
+      :exrabbitmq
+      |> Application.get_env(session_config)
       |> Keyword.get(:queue)
 
     {publish_result, _} = xrmq_basic_publish(test_message, "", queue)

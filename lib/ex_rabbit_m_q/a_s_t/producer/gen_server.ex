@@ -68,7 +68,13 @@ defmodule ExRabbitMQ.AST.Producer.GenServer do
       def handle_info({:xrmq_try_init, opts}, state), do: xrmq_try_init_producer(opts, state)
 
       @impl true
-      def handle_continue({:xrmq_try_init, opts}, state), do: xrmq_try_init_producer(opts, state)
+      def handle_continue({:xrmq_try_init, opts, continuation}, state) do
+        case xrmq_try_init_producer(opts, state) do
+          result when continuation === nil -> result
+          {action, state} -> {action, state, continuation}
+          error -> error
+        end
+      end
     end
   end
 end

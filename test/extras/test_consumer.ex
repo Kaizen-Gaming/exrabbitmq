@@ -18,7 +18,7 @@ defmodule TestConsumer do
       session_config: session_config
     } = state
 
-    {:ok, state, ExRabbitMQ.continue_tuple_try_init(connection_config, session_config, true)}
+    {:ok, state, ExRabbitMQ.continue_tuple_try_init(connection_config, session_config, true, nil)}
   end
 
   def handle_call(:stop, _from, state) do
