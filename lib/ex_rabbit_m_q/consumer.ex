@@ -112,7 +112,7 @@ defmodule ExRabbitMQ.Consumer do
   The simplest way to use this is to add the following as part of the `GenServer.init/1` callback result:
 
   ```elixir
-  ExRabbitMQ.continue_tuple_try_init(connection_config, session_config, true)
+  ExRabbitMQ.continue_tuple_try_init(connection_config, session_config, true, nil)
   ```
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
