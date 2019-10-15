@@ -267,6 +267,19 @@ defmodule ExRabbitMQ.Consumer do
   @callback xrmq_basic_reject(String.t(), term, term) :: CommonAST.result()
 
   @doc """
+  This overridable function can be called whenever `no_ack` is set to `false` and the user wants
+  to requeue a message.
+
+  It is passed the `delivery_tag` of the request and by default it simply requeue the message and
+  redelivered to the next available consumer as per the RabbitMQ API.
+
+  If the `opts` argument is omitted, the default value is `[]`.
+
+  The wrapper process's state is passed in to allow the callback to mutate it if overriden.
+  """
+  @callback xrmq_basic_nack(String.t(), term, term) :: CommonAST.result()
+
+  @doc """
   This overridable function publishes the `payload` to the `exchange` using the provided `routing_key`.
 
   The wrapper process's state is passed in to allow the callback to mutate it if overriden.
@@ -553,6 +566,27 @@ defmodule ExRabbitMQ.Consumer do
         end
       end
 
+      def xrmq_basic_nack(delivery_tag, opts \\ [], state) do
+        case XRMQState.get_channel_info() do
+          {nil, _} ->
+            {:error, XRMQConstants.no_channel_error(), state}
+
+          {channel, _} ->
+            try do
+              case AMQP.Basic.nack(channel, delivery_tag, opts) do
+                :ok -> {:ok, state}
+                error -> {:error, error, state}
+              end
+            catch
+              :exit, reason ->
+                case reason do
+                  {:error, reason} -> {:error, reason, state}
+                  error -> {:error, error, state}
+                end
+            end
+        end
+      end
+
       def xrmq_on_hibernation_threshold_reached(callback_result), do: callback_result
 
       def xrmq_on_connection_opened_consume_failed(reason, state), do: {:halt, reason, state}
@@ -582,6 +616,8 @@ defmodule ExRabbitMQ.Consumer do
                      xrmq_basic_ack: 2,
                      xrmq_basic_reject: 2,
                      xrmq_basic_reject: 3,
+                     xrmq_basic_nack: 2,
+                     xrmq_basic_nack: 3,
                      xrmq_on_hibernation_threshold_reached: 1,
                      xrmq_on_connection_opened_consume_failed: 2,
                      xrmq_on_connection_reopened_consume_failed: 2,
