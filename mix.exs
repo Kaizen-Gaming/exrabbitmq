@@ -4,7 +4,7 @@ defmodule ExRabbitMQ.Mixfile do
   def project do
     [
       app: :exrabbitmq,
-      version: "5.0.1",
+      version: "5.1.0",
       elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() not in [:dev, :test],
@@ -33,7 +33,7 @@ defmodule ExRabbitMQ.Mixfile do
 
   defp deps do
     [
-      {:amqp, "~> 1.1"},
+      {:amqp, "~> 1.3"},
       {:credo, "~> 1.1", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0.0-rc.6", only: :dev, runtime: false},
       {:ex_doc, "~> 0.20.2", only: :dev, runtime: false},

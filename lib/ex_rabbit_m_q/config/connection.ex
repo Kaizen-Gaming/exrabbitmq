@@ -102,7 +102,7 @@ defmodule ExRabbitMQ.Config.Connection do
   defp from_env(app, key) do
     config = Application.get_env(app, key, [])
 
-    client_props =
+    client_properties =
       if is_binary(config[:application_name]),
         do: [{"connection_name", :longstr, config[:application_name]}],
         else: []
@@ -118,7 +118,7 @@ defmodule ExRabbitMQ.Config.Connection do
       max_channels: config[:max_channels],
       pool: PoolConfig.get(config[:pool] || []),
       cleanup_after: config[:cleanup_after],
-      client_properties: client_props
+      client_properties: client_properties
     }
   end
 
