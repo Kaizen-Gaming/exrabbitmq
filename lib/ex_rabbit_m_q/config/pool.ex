@@ -6,7 +6,7 @@ defmodule ExRabbitMQ.Config.Pool do
   @type t :: %__MODULE__{
           size: pos_integer,
           strategy: atom,
-          max_overflow: pos_integer
+          max_overflow: non_neg_integer
         }
 
   @spec get(t()) :: t()
@@ -22,16 +22,15 @@ defmodule ExRabbitMQ.Config.Pool do
   defp from_env(config) do
     %__MODULE__{
       size: config[:size],
-      strategy: config[:strategy],
-      max_overflow: config[:max_overflow]
+      strategy: config[:strategy]
     }
   end
 
   defp merge_defaults(%__MODULE__{} = config) do
     %__MODULE__{
       size: config.size || 20,
-      strategy: :weighted,
-      max_overflow: config.max_overflow || 1
+      strategy: config.strategy || :lifo,
+      max_overflow: 0
     }
   end
 end
